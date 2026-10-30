@@ -217,96 +217,94 @@ export default function Home() {
   if (!isLoaded) return null;
 
   return (
-    <main className="h-screen overflow-hidden bg-[#0F0F10] text-[#E8E0D5] flex flex-col items-center pt-8 px-6 font-sans relative">
+    <main className="h-screen overflow-hidden bg-[#FFF0F3] text-[#4A2C35] flex flex-col items-center pt-8 px-6 font-sans relative">
       
       {showWinCelebration && (
-        <div className="absolute inset-0 z-100 flex flex-col items-center justify-center bg-[#0F0F10]/95 backdrop-blur-md animate-fade-in">
-          <div className="w-32 h-32 rounded-full bg-[#9CAF88] flex items-center justify-center mb-6 animate-pop-in shadow-[0_0_60px_rgba(156,175,136,0.6)]">
+        <div className="absolute inset-0 z-100 flex flex-col items-center justify-center bg-[#FFF0F3]/95 backdrop-blur-md animate-fade-in">
+          <div className="w-32 h-32 rounded-full bg-[#9CAF88] flex items-center justify-center mb-6 animate-pop-in shadow-[0_0_60px_rgba(156,175,136,0.3)]">
             <span className="text-7xl text-white font-bold">✓</span>
           </div>
-          <h2 className="text-3xl font-bold text-[#9CAF88] mb-2 animate-slide-up-slow">You did well.</h2>
-          <p className="text-sm text-[#E8E0D5]/70 animate-slide-up-slow">Circle closed Green 💚</p>
+          <h2 className="text-3xl font-bold text-[#4A2C35] mb-2 animate-slide-up-slow">You did well.</h2>
+          <p className="text-sm text-[#4A2C35]/60 animate-slide-up-slow">Circle closed Green 💚</p>
         </div>
       )}
 
       <div className="flex flex-col items-center w-full relative mb-4 px-8 text-center mt-4">
-        <h1 className="text-2xl font-serif text-[#9CAF88] mb-1 tracking-[0.2em]">LATE CIRCLE</h1>
-        <p className="text-[#E8E0D5]/70 text-xs font-medium">Day {cycleData.currentDay} of your cycle</p>
+        <h1 className="text-2xl font-serif text-[#4A2C35] mb-1 tracking-[0.2em]">LATE CIRCLE</h1>
+        <p className="text-[#4A2C35]/50 text-xs font-medium">Day {cycleData.currentDay} of your cycle</p>
       </div>
 
-      {/* CYCLE RING - CLICKABLE TO /cycle */}
       <button onClick={() => router.push('/cycle')} className="relative mt-2 mb-8 active:scale-95 transition-transform" style={{ width: '180px', height: '180px' }}>
         <svg className="absolute inset-0 transform -rotate-90" width="180" height="180" viewBox="0 0 180 180">
-          <circle cx="90" cy="90" r={ringRadius} fill="transparent" stroke="rgba(232, 224, 213, 0.1)" strokeWidth="26" />
+          <circle cx="90" cy="90" r={ringRadius} fill="transparent" stroke="rgba(74, 44, 53, 0.08)" strokeWidth="26" />
           <circle
             cx="90" cy="90" r={ringRadius} fill="transparent"
-            stroke={cycleData.lateDays > 0 ? "#C97363" : "#9CAF88"} strokeWidth="26"
+            stroke={cycleData.lateDays > 0 ? "#FF8FA3" : "#9CAF88"} strokeWidth="26"
             strokeDasharray={circleCircumference} strokeDashoffset={strokeDashoffset}
             strokeLinecap="round" className="transition-all duration-1000 ease-out"
           />
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center z-10">
           <div className="flex items-baseline justify-center gap-1 leading-none">
-            <span className={`text-4xl font-bold tracking-tighter ${cycleData.lateDays > 0 ? 'text-[#C97363]' : ''}`}>
+            <span className={`text-4xl font-bold tracking-tighter ${cycleData.lateDays > 0 ? 'text-[#FF8FA3]' : 'text-[#4A2C35]'}`}>
               {cycleData.currentDay}
             </span>
-            <span className="text-xl text-[#E8E0D5]/50 font-medium">/ {cycleData.average}</span>
+            <span className="text-xl text-[#4A2C35]/30 font-medium">/ {cycleData.average}</span>
           </div>
-          <span className="text-[9px] text-[#E8E0D5]/70 mt-1 font-bold tracking-widest uppercase">days</span>
+          <span className="text-[9px] text-[#4A2C35]/50 mt-1 font-bold tracking-widest uppercase">days</span>
         </div>
       </button>
 
-      {/* 4 CIRCLES - NOW CLEAN, NO TAGS BANNER */}
       <div className="grid grid-cols-2 gap-x-8 gap-y-6 w-full max-w-sm mb-6 mt-auto">
         <button onClick={() => { if (!isNightClosed) { setActiveModal('food'); setShowFoodDetails(false); setShowFoodLog(false); } }} className="flex flex-col items-center active:scale-95 transition-all">
           <div className={`w-18 h-18 rounded-full flex items-center justify-center transition-all duration-300 ${
-            circles.food ? 'border-[6px] border-[#9CAF88] bg-[#9CAF88]/20 text-[#9CAF88] shadow-[0_0_15px_rgba(156,175,136,0.3)]' : 'border-4 border-[#E8E0D5]/20 text-[#E8E0D5]/50'
+            circles.food ? 'border-[6px] border-[#9CAF88] bg-[#9CAF88]/20 text-[#9CAF88] shadow-[0_0_15px_rgba(156,175,136,0.2)]' : 'border-4 border-[#4A2C35]/10 bg-white text-[#4A2C35]/50'
           }`}>
-            <span className={circles.food ? 'text-3xl font-bold text-white' : 'text-xl'}>{circles.food ? '✓' : '🍲'}</span>
+            <span className={circles.food ? 'text-3xl font-bold text-[#4A2C35]' : 'text-xl'}>{circles.food ? '✓' : '🍲'}</span>
           </div>
-          <span className="mt-2 font-semibold text-sm">Food</span>
-          <span className={`text-xs ${circles.food ? 'text-[#9CAF88]' : 'text-[#E8E0D5]/50'}`}>{circles.food ? 'Closed' : 'Open'}</span>
+          <span className="mt-2 font-semibold text-sm text-[#4A2C35]">Food</span>
+          <span className={`text-xs ${circles.food ? 'text-[#9CAF88]' : 'text-[#4A2C35]/40'}`}>{circles.food ? 'Closed' : 'Open'}</span>
         </button>
 
         <button onClick={() => { if (!isNightClosed) setActiveModal('walk'); }} className="flex flex-col items-center active:scale-95 transition-all">
           <div className={`relative w-18 h-18 rounded-full flex items-center justify-center transition-all duration-300 ${
-            isWalkDone ? 'border-[6px] border-[#9CAF88] bg-[#9CAF88]/20 text-[#9CAF88] shadow-[0_0_15px_rgba(156,175,136,0.3)]' : 'border-4 border-[#E8E0D5]/20 text-[#E8E0D5]/50'
+            isWalkDone ? 'border-[6px] border-[#9CAF88] bg-[#9CAF88]/20 text-[#9CAF88] shadow-[0_0_15px_rgba(156,175,136,0.2)]' : 'border-4 border-[#4A2C35]/10 bg-white text-[#4A2C35]/50'
           }`}>
-            <span className={`relative z-10 ${isWalkDone ? 'text-3xl font-bold text-white' : 'text-xl'}`}>{isWalkDone ? '✓' : '👟'}</span>
+            <span className={`relative z-10 ${isWalkDone ? 'text-3xl font-bold text-[#4A2C35]' : 'text-xl'}`}>{isWalkDone ? '✓' : '👟'}</span>
           </div>
-          <span className="mt-2 font-semibold text-sm">Walk</span>
-          <span className={`text-xs ${isWalkDone ? 'text-[#9CAF88]' : 'text-[#E8E0D5]/50'}`}>{isWalkDone ? 'Closed' : 'Open'}</span>
+          <span className="mt-2 font-semibold text-sm text-[#4A2C35]">Walk</span>
+          <span className={`text-xs ${isWalkDone ? 'text-[#9CAF88]' : 'text-[#4A2C35]/40'}`}>{isWalkDone ? 'Closed' : 'Open'}</span>
         </button>
 
         <button onClick={() => { if (!isNightClosed) setActiveModal('sleep'); }} className="flex flex-col items-center active:scale-95 transition-all">
           <div className={`w-18 h-18 rounded-full flex items-center justify-center transition-all duration-300 ${
-            circles.sleep ? 'border-[6px] border-[#9CAF88] bg-[#9CAF88]/20 text-[#9CAF88] shadow-[0_0_15px_rgba(156,175,136,0.3)]' : 'border-4 border-[#E8E0D5]/20 text-[#E8E0D5]/50'
+            circles.sleep ? 'border-[6px] border-[#9CAF88] bg-[#9CAF88]/20 text-[#9CAF88] shadow-[0_0_15px_rgba(156,175,136,0.2)]' : 'border-4 border-[#4A2C35]/10 bg-white text-[#4A2C35]/50'
           }`}>
-            <span className={circles.sleep ? 'text-3xl font-bold text-white' : 'text-xl'}>{circles.sleep ? '✓' : '🌙'}</span>
+            <span className={circles.sleep ? 'text-3xl font-bold text-[#4A2C35]' : 'text-xl'}>{circles.sleep ? '✓' : '🌙'}</span>
           </div>
-          <span className="mt-2 font-semibold text-sm">Sleep</span>
-          <span className={`text-xs ${circles.sleep ? 'text-[#9CAF88]' : 'text-[#E8E0D5]/50'}`}>{circles.sleep ? 'Closed' : 'Open'}</span>
+          <span className="mt-2 font-semibold text-sm text-[#4A2C35]">Sleep</span>
+          <span className={`text-xs ${circles.sleep ? 'text-[#9CAF88]' : 'text-[#4A2C35]/40'}`}>{circles.sleep ? 'Closed' : 'Open'}</span>
         </button>
 
         <button onClick={() => { if (!isNightClosed) openCalmMenu(); }} className="flex flex-col items-center active:scale-95 transition-all">
           <div className={`w-18 h-18 rounded-full flex items-center justify-center transition-all duration-300 ${
-            circles.calm ? 'border-[6px] border-[#9CAF88] bg-[#9CAF88]/20 text-[#9CAF88] shadow-[0_0_15px_rgba(156,175,136,0.3)]' : 'border-4 border-[#E8E0D5]/20 text-[#E8E0D5]/50'
+            circles.calm ? 'border-[6px] border-[#9CAF88] bg-[#9CAF88]/20 text-[#9CAF88] shadow-[0_0_15px_rgba(156,175,136,0.2)]' : 'border-4 border-[#4A2C35]/10 bg-white text-[#4A2C35]/50'
           }`}>
-            <span className={circles.calm ? 'text-3xl font-bold text-white' : 'text-xl'}>{circles.calm ? '✓' : '🧠'}</span>
+            <span className={circles.calm ? 'text-3xl font-bold text-[#4A2C35]' : 'text-xl'}>{circles.calm ? '✓' : '🧠'}</span>
           </div>
-          <span className="mt-2 font-semibold text-sm">Calm</span>
-          <span className={`text-xs ${circles.calm ? 'text-[#9CAF88]' : 'text-[#E8E0D5]/50'}`}>{circles.calm ? 'Closed' : '90 secs'}</span>
+          <span className="mt-2 font-semibold text-sm text-[#4A2C35]">Calm</span>
+          <span className={`text-xs ${circles.calm ? 'text-[#9CAF88]' : 'text-[#4A2C35]/40'}`}>{circles.calm ? 'Closed' : '90 secs'}</span>
         </button>
       </div>
 
       <div className="w-full max-w-sm flex flex-col items-center mb-28 mt-auto">
-        <h2 className="text-xl font-bold text-[#9CAF88] mb-2">{closedCount} / 4 today</h2>
+        <h2 className="text-xl font-bold text-[#4A2C35] mb-2">{closedCount} / 4 today</h2>
         <button 
           onClick={() => setShowGoodnight(true)} 
           className={`w-full py-4 rounded-full text-lg font-bold active:scale-95 transition-all ${
             closedCount === 4 
-              ? 'bg-[#9CAF88] text-[#0F0F10] shadow-[0_0_30px_rgba(156,175,136,0.6)] animate-pulse' 
-              : 'bg-[#9CAF88] text-[#0F0F10] shadow-[0_0_20px_rgba(156,175,136,0.2)]'
+              ? 'bg-[#4A2C35] text-white shadow-[0_4px_20px_rgba(74,44,53,0.2)] animate-pulse' 
+              : 'bg-[#9CAF88] text-white shadow-[0_4px_20px_rgba(156,175,136,0.3)]'
           }`}
         >
           {closedCount === 4 ? "I'm done for today 💚" : "Close my night (7pm-11pm)"}
@@ -314,15 +312,15 @@ export default function Home() {
       </div>
 
       {activeModal && activeModal !== 'calm' && (
-        <div className="absolute inset-0 bg-black/70 flex items-center justify-center z-50 p-6">
-          <div className="w-full max-w-sm bg-[#1A1A1C] rounded-3xl p-6 text-[#E8E0D5] shadow-2xl animate-slide-up border border-[#E8E0D5]/10">
+        <div className="absolute inset-0 bg-[#4A2C35]/20 backdrop-blur-sm flex items-center justify-center z-50 p-6">
+          <div className="w-full max-w-sm bg-white rounded-3xl p-6 text-[#4A2C35] shadow-2xl animate-slide-up border border-[#4A2C35]/5">
             {activeModal === 'food' && (
               <div className="flex flex-col max-h-[75vh]">
                 {!showFoodLog ? (
                   <>
-                    <h3 className="text-lg font-bold mb-3 text-[#9CAF88] leading-snug">Did you eat balanced plates today with Nigerian food? No food after 9pm?</h3>
-                    <div className="bg-[#9CAF88]/15 border border-[#9CAF88]/40 rounded-2xl p-4 mb-3">
-                      <ul className="text-[13px] text-[#E8E0D5]/90 space-y-1.5">
+                    <h3 className="text-lg font-bold mb-3 text-[#4A2C35] leading-snug">Did you eat balanced plates today with Nigerian food? No food after 9pm?</h3>
+                    <div className="bg-[#FFF0F3] border border-[#FFB3C1]/30 rounded-2xl p-4 mb-3">
+                      <ul className="text-[13px] text-[#4A2C35]/80 space-y-1.5">
                         <li>• Rice + stew + protein + vegetable</li>
                         <li>• Eba / fufu + soup + protein</li>
                         <li>• Yam / beans + vegetable + protein</li>
@@ -331,45 +329,45 @@ export default function Home() {
                     </div>
                     <p className="text-[11px] text-[#9CAF88] font-semibold mb-5">Rule: Last food before 9pm</p>
                     <div className="flex gap-3 mt-auto">
-                      <button onClick={handleFoodYes} className="flex-1 bg-[#9CAF88] text-[#0F0F10] py-3 rounded-xl font-bold active:scale-95">Yes, I did</button>
-                      <button onClick={() => setShowFoodLog(true)} className="flex-1 border border-[#E8E0D5]/30 py-3 rounded-xl font-medium opacity-80 active:scale-95">No, I didn't</button>
+                      <button onClick={handleFoodYes} className="flex-1 bg-[#9CAF88] text-white py-3 rounded-xl font-bold active:scale-95">Yes, I did</button>
+                      <button onClick={() => setShowFoodLog(true)} className="flex-1 border border-[#4A2C35]/15 py-3 rounded-xl font-medium active:scale-95">No, I didn't</button>
                     </div>
                   </>
                 ) : !showFoodDetails ? (
                   <>
-                    <h3 className="text-xl font-bold mb-2 text-[#9CAF88]">What did you eat?</h3>
-                    <input type="text" placeholder="Search e.g. Bread, Eba..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full bg-[#0F0F10] border border-[#E8E0D5]/20 text-[#E8E0D5] p-4 rounded-xl mb-4 focus:outline-none focus:border-[#9CAF88]" />
+                    <h3 className="text-xl font-bold mb-2 text-[#4A2C35]">What did you eat?</h3>
+                    <input type="text" placeholder="Search e.g. Bread, Eba..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full bg-[#FFF0F3] border border-[#4A2C35]/10 text-[#4A2C35] p-4 rounded-xl mb-4 focus:outline-none focus:border-[#FF8FA3]" />
                     <div className="overflow-y-auto flex-1 flex flex-col gap-2 mb-4 pr-2">
                       {filteredFoods.map((food) => {
                         const isSelected = selectedFoods.some(f => f.id === food.id);
                         return (
-                          <button key={food.id} onClick={() => toggleFoodSelection(food)} className={`p-4 rounded-xl text-left border flex justify-between items-center transition-all ${isSelected ? 'border-[#9CAF88] bg-[#9CAF88]/10' : 'border-[#E8E0D5]/10 bg-[#E8E0D5]/5'}`}>
-                            <p className="font-semibold text-[#E8E0D5]">{food.name}</p>
+                          <button key={food.id} onClick={() => toggleFoodSelection(food)} className={`p-4 rounded-xl text-left border flex justify-between items-center transition-all ${isSelected ? 'border-[#9CAF88] bg-[#9CAF88]/10' : 'border-[#4A2C35]/5 bg-[#FFF0F3]/50'}`}>
+                            <p className="font-semibold text-[#4A2C35]">{food.name}</p>
                             {isSelected && <span className="text-[#9CAF88] text-xl">✓</span>}
                           </button>
                         );
                       })}
                     </div>
                     <div className="flex gap-3 mt-auto">
-                      <button onClick={() => setShowFoodDetails(true)} disabled={selectedFoods.length === 0} className={`flex-1 py-3 rounded-xl font-bold ${selectedFoods.length > 0 ? 'bg-[#9CAF88] text-[#0F0F10]' : 'bg-[#9CAF88]/30 text-[#0F0F10]/50'}`}>Next</button>
-                      <button onClick={() => setActiveModal(null)} className="px-6 border border-[#E8E0D5]/30 py-3 rounded-xl font-medium opacity-70">Cancel</button>
+                      <button onClick={() => setShowFoodDetails(true)} disabled={selectedFoods.length === 0} className={`flex-1 py-3 rounded-xl font-bold ${selectedFoods.length > 0 ? 'bg-[#9CAF88] text-white' : 'bg-[#9CAF88]/30 text-white/50'}`}>Next</button>
+                      <button onClick={() => setActiveModal(null)} className="px-6 border border-[#4A2C35]/15 py-3 rounded-xl font-medium opacity-70">Cancel</button>
                     </div>
                   </>
                 ) : (
                   <>
-                    <h3 className="text-lg font-bold mb-3 text-[#9CAF88]">Confirm your plate</h3>
-                    <div className="bg-[#0F0F10] p-4 rounded-xl border border-[#E8E0D5]/10 mb-4">
-                      <p className="text-sm font-bold mb-2 text-[#E8E0D5]">{selectedFoods.map(f => f.name).join(' + ')}</p>
-                      <p className="text-xs text-[#E8E0D5]/70 mb-4">{plateFix}</p>
+                    <h3 className="text-lg font-bold mb-3 text-[#4A2C35]">Confirm your plate</h3>
+                    <div className="bg-[#FFF0F3] p-4 rounded-xl border border-[#4A2C35]/5 mb-4">
+                      <p className="text-sm font-bold mb-2 text-[#4A2C35]">{selectedFoods.map(f => f.name).join(' + ')}</p>
+                      <p className="text-xs text-[#4A2C35]/60 mb-4">{plateFix}</p>
                       {plateScore !== 'Green' ? (
                         <div className="flex gap-2 mb-4">
-                          <button onClick={() => logFood(true)} className="flex-1 py-3 rounded-xl font-bold bg-[#9CAF88] text-[#0F0F10] text-xs">I added it (Make it Green)</button>
-                          <button onClick={() => logFood(false)} className="flex-1 py-3 rounded-xl font-bold bg-[#E8E0D5]/10 text-[#E8E0D5] border border-[#E8E0D5]/30 text-xs">I will eat it like this</button>
+                          <button onClick={() => logFood(true)} className="flex-1 py-3 rounded-xl font-bold bg-[#9CAF88] text-white text-xs">I added it (Make it Green)</button>
+                          <button onClick={() => logFood(false)} className="flex-1 py-3 rounded-xl font-bold bg-white text-[#4A2C35] border border-[#4A2C35]/10 text-xs">I will eat it like this</button>
                         </div>
                       ) : (
-                        <button onClick={() => logFood(true)} className="w-full py-3 rounded-xl font-bold bg-[#9CAF88] text-[#0F0F10] text-sm mb-4">Close it Green</button>
+                        <button onClick={() => logFood(true)} className="w-full py-3 rounded-xl font-bold bg-[#9CAF88] text-white text-sm mb-4">Close it Green</button>
                       )}
-                      <button onClick={() => setShowFoodDetails(false)} className="w-full text-[10px] text-[#E8E0D5]/50 underline">Back to search</button>
+                      <button onClick={() => setShowFoodDetails(false)} className="w-full text-[10px] text-[#4A2C35]/40 underline">Back to search</button>
                     </div>
                   </>
                 )}
@@ -377,9 +375,9 @@ export default function Home() {
             )}
             {activeModal === 'walk' && (
               <>
-                <h3 className="text-lg font-bold mb-3 text-[#9CAF88] leading-snug">Did you walk or move 20 mins today? Not gym, just move?</h3>
-                <div className="bg-[#9CAF88]/15 border border-[#9CAF88]/40 rounded-2xl p-4 mb-3">
-                  <ul className="text-[13px] text-[#E8E0D5]/90 space-y-1.5">
+                <h3 className="text-lg font-bold mb-3 text-[#4A2C35] leading-snug">Did you walk or move 20 mins today? Not gym, just move?</h3>
+                <div className="bg-[#FFF0F3] border border-[#FFB3C1]/30 rounded-2xl p-4 mb-3">
+                  <ul className="text-[13px] text-[#4A2C35]/80 space-y-1.5">
                     <li>• Walk to junction and back</li>
                     <li>• Dance to 3 songs in room</li>
                     <li>• Sweep, mop, climb stairs 10 mins</li>
@@ -388,19 +386,19 @@ export default function Home() {
                 </div>
                 <p className="text-[11px] text-[#9CAF88] font-semibold mb-5">Rule: No need gym wear</p>
                 <div className="flex gap-3 mt-auto">
-                  <button onClick={() => handleQuickWin('walk')} className="flex-1 bg-[#9CAF88] text-[#0F0F10] py-3 rounded-xl font-bold active:scale-95">Yes, I moved 20 mins</button>
-                  <button onClick={() => setActiveModal(null)} className="flex-1 border border-[#E8E0D5]/30 py-3 rounded-xl font-medium opacity-70 active:scale-95">Not yet</button>
+                  <button onClick={() => handleQuickWin('walk')} className="flex-1 bg-[#9CAF88] text-white py-3 rounded-xl font-bold active:scale-95">Yes, I moved 20 mins</button>
+                  <button onClick={() => setActiveModal(null)} className="flex-1 border border-[#4A2C35]/15 py-3 rounded-xl font-medium active:scale-95">Not yet</button>
                 </div>
               </>
             )}
             {activeModal === 'sleep' && (
               <>
-                <h3 className="text-lg font-bold mb-3 text-[#9CAF88] leading-snug">Will you be in bed by 10:30pm tonight? No phone scrolling?</h3>
+                <h3 className="text-lg font-bold mb-3 text-[#4A2C35] leading-snug">Will you be in bed by 10:30pm tonight? No phone scrolling?</h3>
                 <p className="text-[11px] text-[#9CAF88] font-semibold mb-1">Rule: Bed by 10:30, not sleep by 10:30</p>
-                <p className="text-[11px] text-[#E8E0D5]/60 font-medium mb-5">Target: 7+ hrs of sleep</p>
+                <p className="text-[11px] text-[#4A2C35]/50 font-medium mb-5">Target: 7+ hrs of sleep</p>
                 <div className="flex gap-3 mt-auto">
-                  <button onClick={() => handleQuickWin('sleep')} className="flex-1 bg-[#9CAF88] text-[#0F0F10] py-3 rounded-xl font-bold active:scale-95">Yes, I will</button>
-                  <button onClick={() => setActiveModal(null)} className="flex-1 border border-[#E8E0D5]/30 py-3 rounded-xl font-medium opacity-70 active:scale-95">Not yet</button>
+                  <button onClick={() => handleQuickWin('sleep')} className="flex-1 bg-[#9CAF88] text-white py-3 rounded-xl font-bold active:scale-95">Yes, I will</button>
+                  <button onClick={() => setActiveModal(null)} className="flex-1 border border-[#4A2C35]/15 py-3 rounded-xl font-medium active:scale-95">Not yet</button>
                 </div>
               </>
             )}
@@ -409,146 +407,146 @@ export default function Home() {
       )}
 
       {activeModal === 'calm' && (
-        <div className="absolute inset-0 bg-[#0F0F10] z-50 flex flex-col pt-12 px-6">
+        <div className="absolute inset-0 bg-[#FFF0F3] z-50 flex flex-col pt-12 px-6">
           {calmView === 'menu' && (
             <div className="flex flex-col h-full animate-fade-in">
               <div className="flex flex-col items-center mb-8">
-                <h1 className="text-3xl font-bold text-[#E8E0D5] mb-2">Late Circle</h1>
-                <p className="text-sm text-[#E8E0D5]/60">Calm tools for your night</p>
+                <h1 className="text-3xl font-bold text-[#4A2C35] mb-2">Late Circle</h1>
+                <p className="text-sm text-[#4A2C35]/50">Calm tools for your night</p>
               </div>
               <div className="flex flex-col gap-4 w-full max-w-sm mx-auto">
-                <button onClick={() => { setCalmView('breathing'); setBreathTime(90); }} className="flex items-center gap-4 bg-[#1A1A1C] border border-[#E8E0D5]/10 p-4 rounded-2xl active:scale-95 transition-transform">
-                  <div className="w-14 h-14 rounded-xl bg-[#9CAF88] flex items-center justify-center text-2xl">⭐</div>
+                <button onClick={() => { setCalmView('breathing'); setBreathTime(90); }} className="flex items-center gap-4 bg-white border border-[#4A2C35]/5 p-4 rounded-2xl shadow-sm active:scale-95">
+                  <div className="w-14 h-14 rounded-xl bg-[#FFF0F3] flex items-center justify-center text-2xl">⭐</div>
                   <div className="text-left">
-                    <h3 className="text-lg font-bold text-white">Don't Talk To Me</h3>
-                    <p className="text-xs text-[#E8E0D5]/60">No sweet words, just space</p>
+                    <h3 className="text-lg font-bold text-[#4A2C35]">Don't Talk To Me</h3>
+                    <p className="text-xs text-[#4A2C35]/50">No sweet words, just space</p>
                   </div>
                 </button>
-                <button onClick={() => { setCalmView('breathing'); setBreathTime(90); }} className="flex items-center gap-4 bg-[#1A1A1C] border border-[#E8E0D5]/10 p-4 rounded-2xl active:scale-95 transition-transform">
-                  <div className="w-14 h-14 rounded-xl bg-[#9CAF88] flex items-center justify-center text-2xl">🎯</div>
+                <button onClick={() => { setCalmView('breathing'); setBreathTime(90); }} className="flex items-center gap-4 bg-white border border-[#4A2C35]/5 p-4 rounded-2xl shadow-sm active:scale-95">
+                  <div className="w-14 h-14 rounded-xl bg-[#9CAF88]/15 flex items-center justify-center text-2xl">🎯</div>
                   <div className="text-left">
-                    <h3 className="text-lg font-bold text-white">Breathing Circle</h3>
-                    <p className="text-xs text-[#E8E0D5]/60">Inhale 4s • Hold • Exhale 4s</p>
+                    <h3 className="text-lg font-bold text-[#4A2C35]">Breathing Circle</h3>
+                    <p className="text-xs text-[#4A2C35]/50">Inhale 4s • Hold • Exhale 4s</p>
                   </div>
                 </button>
-                <button onClick={() => setCalmView('burn')} className="flex items-center gap-4 bg-[#1A1A1C] border border-[#E8E0D5]/10 p-4 rounded-2xl active:scale-95 transition-transform">
-                  <div className="w-14 h-14 rounded-xl bg-[#9CAF88] flex items-center justify-center text-2xl">✍️</div>
+                <button onClick={() => setCalmView('burn')} className="flex items-center gap-4 bg-white border border-[#4A2C35]/5 p-4 rounded-2xl shadow-sm active:scale-95">
+                  <div className="w-14 h-14 rounded-xl bg-[#FFB3C1]/30 flex items-center justify-center text-2xl">✍️</div>
                   <div className="text-left">
-                    <h3 className="text-lg font-bold text-white">Scribble & Burn</h3>
-                    <p className="text-xs text-[#E8E0D5]/60">Type & watch it burn</p>
+                    <h3 className="text-lg font-bold text-[#4A2C35]">Scribble & Burn</h3>
+                    <p className="text-xs text-[#4A2C35]/50">Type & watch it burn</p>
                   </div>
                 </button>
-                <button onClick={() => setCalmView('rain')} className="flex items-center gap-4 bg-[#1A1A1C] border border-[#E8E0D5]/10 p-4 rounded-2xl active:scale-95 transition-transform">
-                  <div className="w-14 h-14 rounded-xl bg-[#9CAF88] flex items-center justify-center text-2xl">🌧️</div>
+                <button onClick={() => setCalmView('rain')} className="flex items-center gap-4 bg-white border border-[#4A2C35]/5 p-4 rounded-2xl shadow-sm active:scale-95">
+                  <div className="w-14 h-14 rounded-xl bg-[#9CAF88]/10 flex items-center justify-center text-2xl">🌧️</div>
                   <div className="text-left">
-                    <h3 className="text-lg font-bold text-white">Rain on Zinc Roof</h3>
-                    <p className="text-xs text-[#E8E0D5]/60">Enugu rain sounds</p>
+                    <h3 className="text-lg font-bold text-[#4A2C35]">Rain on Zinc Roof</h3>
+                    <p className="text-xs text-[#4A2C35]/50">Enugu rain sounds</p>
                   </div>
                 </button>
               </div>
               <div className="mt-auto mb-10 w-full max-w-sm mx-auto flex flex-col gap-3">
-                <button onClick={() => completeCircle('calm')} className="w-full bg-[#9CAF88] text-[#0F0F10] py-4 rounded-full text-lg font-bold active:scale-95 transition-transform">I did my calm</button>
-                <button onClick={() => setActiveModal(null)} className="w-full text-center text-sm text-[#E8E0D5]/50 py-2">Close</button>
+                <button onClick={() => completeCircle('calm')} className="w-full bg-[#4A2C35] text-white py-4 rounded-full text-lg font-bold active:scale-95">I did my calm</button>
+                <button onClick={() => setActiveModal(null)} className="w-full text-center text-sm text-[#4A2C35]/40 py-2">Close</button>
               </div>
             </div>
           )}
           {calmView === 'breathing' && (
             <div className="flex flex-col items-center justify-between h-full animate-fade-in pb-32">
-              <h2 className="text-lg text-[#E8E0D5]/60 mt-4">Don't Talk To Me</h2>
+              <h2 className="text-lg text-[#4A2C35]/50 mt-4">Don't Talk To Me</h2>
               <div className="relative flex items-center justify-center w-64 h-64">
                 <svg className="absolute inset-0 transform -rotate-90" width="256" height="256" viewBox="0 0 256 256">
-                  <circle cx="128" cy="128" r="120" fill="transparent" stroke="rgba(232, 224, 213, 0.1)" strokeWidth="2" />
-                  <circle cx="128" cy="128" r="120" fill="transparent" stroke="#9CAF88" strokeWidth="2" strokeDasharray={2 * Math.PI * 120} strokeDashoffset={(2 * Math.PI * 120) - ((90 - breathTime) / 90) * (2 * Math.PI * 120)} strokeLinecap="round" className="transition-all duration-1000 ease-linear" />
+                  <circle cx="128" cy="128" r="120" fill="transparent" stroke="rgba(74,44,53,0.08)" strokeWidth="2" />
+                  <circle cx="128" cy="128" r="120" fill="transparent" stroke="#9CAF88" strokeWidth="2" strokeDasharray={2 * Math.PI * 120} strokeDashoffset={(2 * Math.PI * 120) - ((90 - breathTime) / 90) * (2 * Math.PI * 120)} strokeLinecap="round" />
                 </svg>
-                <div className="w-32 h-32 rounded-full bg-[#9CAF88] shadow-[0_0_40px_rgba(156,175,136,0.4)] animate-breathe flex items-center justify-center">
+                <div className="w-32 h-32 rounded-full bg-[#9CAF88] shadow-[0_0_40px_rgba(156,175,136,0.3)] animate-breathe flex items-center justify-center">
                   <div className="w-2 h-2 rounded-full bg-white opacity-80"></div>
                 </div>
               </div>
               <div className="text-center mb-4">
-                <p className="text-sm text-[#E8E0D5]/70">90 seconds. Just you.</p>
-                <p className="text-sm text-[#E8E0D5]/70">You're safe.</p>
+                <p className="text-sm text-[#4A2C35]/60">90 seconds. Just you.</p>
+                <p className="text-sm text-[#4A2C35]/60">You're safe.</p>
               </div>
             </div>
           )}
           {calmView === 'burn' && (
             <div className="flex flex-col items-center justify-center h-full text-center animate-fade-in">
-              <h2 className="text-2xl font-bold text-white mb-2">Scribble & Burn</h2>
-              <p className="text-sm text-[#E8E0D5]/60 mb-8">Type & watch it burn. Private, not saved.</p>
-              <div className="w-full max-w-sm bg-white text-black p-6 rounded-lg shadow-2xl rotate-2">
+              <h2 className="text-2xl font-bold text-[#4A2C35] mb-2">Scribble & Burn</h2>
+              <p className="text-sm text-[#4A2C35]/50 mb-8">Type & watch it burn. Private, not saved.</p>
+              <div className="w-full max-w-sm bg-white text-[#4A2C35] p-6 rounded-lg shadow-xl rotate-1 border border-[#4A2C35]/5">
                 <p className="text-lg font-handwriting">I am just tired of waiting...</p>
               </div>
-              <button onClick={() => completeCircle('calm')} className="mt-12 w-full max-w-sm bg-[#9CAF88] text-[#0F0F10] py-4 rounded-full text-lg font-bold">Burn & Close Calm</button>
+              <button onClick={() => completeCircle('calm')} className="mt-12 w-full max-w-sm bg-[#4A2C35] text-white py-4 rounded-full text-lg font-bold">Burn & Close Calm</button>
             </div>
           )}
           {calmView === 'rain' && (
             <div className="flex flex-col items-center justify-center h-full text-center animate-fade-in">
-              <h2 className="text-2xl font-bold text-white mb-2">Rain on Zinc Roof</h2>
-              <p className="text-sm text-[#E8E0D5]/60 mb-8">Enugu rain sounds • 2:00</p>
+              <h2 className="text-2xl font-bold text-[#4A2C35] mb-2">Rain on Zinc Roof</h2>
+              <p className="text-sm text-[#4A2C35]/50 mb-8">Enugu rain sounds • 2:00</p>
               <div className="w-48 h-24 border-b-2 border-[#9CAF88] flex items-end justify-center gap-1 mb-12">
                 <div className="w-2 bg-[#9CAF88] h-full animate-pulse"></div>
                 <div className="w-2 bg-[#9CAF88] h-3/4 animate-pulse delay-75"></div>
                 <div className="w-2 bg-[#9CAF88] h-1/2 animate-pulse delay-150"></div>
                 <div className="w-2 bg-[#9CAF88] h-full animate-pulse delay-300"></div>
               </div>
-              <button onClick={() => completeCircle('calm')} className="w-full max-w-sm bg-[#9CAF88] text-[#0F0F10] py-4 rounded-full text-lg font-bold">Close Calm</button>
+              <button onClick={() => completeCircle('calm')} className="w-full max-w-sm bg-[#4A2C35] text-white py-4 rounded-full text-lg font-bold">Close Calm</button>
             </div>
           )}
         </div>
       )}
 
       {showGoodnight && (
-        <div className="absolute inset-0 bg-[#0F0F10] z-50 flex flex-col items-center pt-12 px-6 pb-28">
+        <div className="absolute inset-0 bg-[#FFF0F3] z-50 flex flex-col items-center pt-12 px-6 pb-28">
           <div className="flex items-center gap-3 mb-2 text-[#9CAF88]">
             <span className="text-3xl">🌙</span>
-            <h1 className="text-3xl font-serif">Goodnight, Ada</h1>
+            <h1 className="text-3xl font-serif text-[#4A2C35]">Goodnight, Ada</h1>
           </div>
-          <p className="text-[#E8E0D5]/70 text-sm mb-10 text-center">
+          <p className="text-[#4A2C35]/60 text-sm mb-10 text-center">
             {closedCount === 4 ? "You closed all 4 circles today. You showed up for yourself." : `You closed ${closedCount} circle${closedCount === 1 ? '' : 's'} today. That's still a win.`}
           </p>
-          <div className="flex justify-between w-full max-w-sm mb-10 bg-[#1A1A1C] p-4 rounded-3xl border border-[#E8E0D5]/10">
+          <div className="flex justify-between w-full max-w-sm mb-10 bg-white p-4 rounded-3xl border border-[#4A2C35]/5 shadow-sm">
             <div className="flex flex-col items-center gap-2">
-              <div className={`w-14 h-14 rounded-full flex items-center justify-center ${circles.food ? 'bg-[#9CAF88] text-white' : 'border-2 border-[#E8E0D5]/20 text-[#E8E0D5]/50'}`}><span className="text-xl">{circles.food ? '✓' : '🍲'}</span></div>
-              <span className="text-xs text-[#E8E0D5]/70">Food</span>
+              <div className={`w-14 h-14 rounded-full flex items-center justify-center ${circles.food ? 'bg-[#9CAF88] text-white' : 'border-2 border-[#4A2C35]/10 text-[#4A2C35]/40'}`}><span className="text-xl">{circles.food ? '✓' : '🍲'}</span></div>
+              <span className="text-xs text-[#4A2C35]/60">Food</span>
             </div>
             <div className="flex flex-col items-center gap-2">
-              <div className={`w-14 h-14 rounded-full flex items-center justify-center ${isWalkDone ? 'bg-[#9CAF88] text-white' : 'border-2 border-[#E8E0D5]/20 text-[#E8E0D5]/50'}`}><span className="text-xl">{isWalkDone ? '✓' : '👟'}</span></div>
-              <span className="text-xs text-[#E8E0D5]/70">Walk</span>
+              <div className={`w-14 h-14 rounded-full flex items-center justify-center ${isWalkDone ? 'bg-[#9CAF88] text-white' : 'border-2 border-[#4A2C35]/10 text-[#4A2C35]/40'}`}><span className="text-xl">{isWalkDone ? '✓' : '👟'}</span></div>
+              <span className="text-xs text-[#4A2C35]/60">Walk</span>
             </div>
             <div className="flex flex-col items-center gap-2">
-              <div className={`w-14 h-14 rounded-full flex items-center justify-center ${circles.sleep ? 'bg-[#9CAF88] text-white' : 'border-2 border-[#E8E0D5]/20 text-[#E8E0D5]/50'}`}><span className="text-xl">{circles.sleep ? '✓' : '🌙'}</span></div>
-              <span className="text-xs text-[#E8E0D5]/70">Sleep</span>
+              <div className={`w-14 h-14 rounded-full flex items-center justify-center ${circles.sleep ? 'bg-[#9CAF88] text-white' : 'border-2 border-[#4A2C35]/10 text-[#4A2C35]/40'}`}><span className="text-xl">{circles.sleep ? '✓' : '🌙'}</span></div>
+              <span className="text-xs text-[#4A2C35]/60">Sleep</span>
             </div>
             <div className="flex flex-col items-center gap-2">
-              <div className={`w-14 h-14 rounded-full flex items-center justify-center ${circles.calm ? 'bg-[#9CAF88] text-white' : 'border-2 border-[#E8E0D5]/20 text-[#E8E0D5]/50'}`}><span className="text-xl">{circles.calm ? '✓' : '🧠'}</span></div>
-              <span className="text-xs text-[#E8E0D5]/70">Calm</span>
+              <div className={`w-14 h-14 rounded-full flex items-center justify-center ${circles.calm ? 'bg-[#9CAF88] text-white' : 'border-2 border-[#4A2C35]/10 text-[#4A2C35]/40'}`}><span className="text-xl">{circles.calm ? '✓' : '🧠'}</span></div>
+              <span className="text-xs text-[#4A2C35]/60">Calm</span>
             </div>
           </div>
           {oviPattern && (
-            <div className="bg-[#1A1A1C] border border-[#C97363]/30 p-4 rounded-2xl mb-6 w-full max-w-sm">
-              <h3 className="text-xs font-bold text-[#C97363] uppercase tracking-wider mb-2">Ovi Noticed</h3>
-              <p className="text-sm text-[#E8E0D5] leading-relaxed">{oviPattern}</p>
+            <div className="bg-white border border-[#FFB3C1]/30 p-4 rounded-2xl mb-6 w-full max-w-sm shadow-sm">
+              <h3 className="text-xs font-bold text-[#8A2C3E] uppercase tracking-wider mb-2">Ovi Noticed</h3>
+              <p className="text-sm text-[#4A2C35] leading-relaxed">{oviPattern}</p>
             </div>
           )}
           <div className="w-full max-w-sm flex flex-col items-center mt-12">
-            <h2 className="text-3xl font-bold text-[#9CAF88] mb-2 flex items-center justify-center gap-2 text-center w-full">You showed up today 💚</h2>
-            <p className="text-[#E8E0D5]/70 text-sm mb-8 text-center px-4">
+            <h2 className="text-3xl font-bold text-[#4A2C35] mb-2 text-center w-full">You showed up today 💚</h2>
+            <p className="text-[#4A2C35]/60 text-sm mb-8 text-center px-4">
               {closedCount === 4 ? "Perfect day, babe. Let's do it again tomorrow ✨" : !circles.sleep ? "Tomorrow's little goal: In bed by 10:30pm, no scrolling ✨" : !circles.food ? "Tomorrow's little goal: Eat a lovely balanced plate before 9pm 🍲" : !isWalkDone ? "Tomorrow's little goal: 20 mins of moving your body 👟" : "Tomorrow's little goal: 90 seconds of calm just for you 🧠"}
             </p>
             <div className="mt-auto w-full">
-              <button onClick={() => { setIsNightClosed(true); localStorage.setItem('lateCircleNightClosed', 'true'); setShowGoodnight(false); }} className="w-full bg-[#9CAF88] text-[#0F0F10] py-4 rounded-full text-lg font-bold active:scale-95 transition-transform shadow-[0_0_20px_rgba(156,175,136,0.2)]">See you tomorrow</button>
+              <button onClick={() => { setIsNightClosed(true); localStorage.setItem('lateCircleNightClosed', 'true'); setShowGoodnight(false); }} className="w-full bg-[#4A2C35] text-white py-4 rounded-full text-lg font-bold active:scale-95 shadow-[0_4px_20px_rgba(74,44,53,0.15)]">See you tomorrow</button>
             </div>
           </div>
         </div>
       )}
 
       {isNightClosed && (
-        <div className="fixed inset-0 bg-[#0F0F10] z-100 flex flex-col items-center justify-center px-6 pb-28 animate-fade-in">
-          <div className="w-24 h-24 rounded-full bg-[#9CAF88]/20 flex items-center justify-center mb-6">
+        <div className="fixed inset-0 bg-[#FFF0F3] z-100 flex flex-col items-center justify-center px-6 pb-28 animate-fade-in">
+          <div className="w-24 h-24 rounded-full bg-[#9CAF88]/15 flex items-center justify-center mb-6">
             <span className="text-5xl">🌙</span>
           </div>
-          <h1 className="text-3xl font-serif text-[#9CAF88] mb-4 text-center">You're all done for today.</h1>
-          <p className="text-[#E8E0D5]/70 text-sm text-center max-w-xs mb-12">Your circles are locked. Close the app, put the phone down, and get some rest. See you tomorrow.</p>
-          <button onClick={() => { setIsNightClosed(false); localStorage.removeItem('lateCircleNightClosed'); }} className="px-6 py-3 rounded-full border border-[#E8E0D5]/20 text-[#E8E0D5]/60 text-sm font-medium active:scale-95 transition-all hover:bg-[#E8E0D5]/5">I really need to check something</button>
+          <h1 className="text-3xl font-serif text-[#4A2C35] mb-4 text-center">You're all done for today.</h1>
+          <p className="text-[#4A2C35]/60 text-sm text-center max-w-xs mb-12">Your circles are locked. Close the app, put the phone down, and get some rest. See you tomorrow.</p>
+          <button onClick={() => { setIsNightClosed(false); localStorage.removeItem('lateCircleNightClosed'); }} className="px-6 py-3 rounded-full border border-[#4A2C35]/15 text-[#4A2C35]/60 text-sm font-medium active:scale-95 bg-white">I really need to check something</button>
         </div>
       )}
 
