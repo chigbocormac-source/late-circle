@@ -17,7 +17,7 @@ export default function RootLayout({
 }>): React.ReactNode {
   return (
     <html lang="en">
-      <body className={`${inter.className} bg-[#0F0F10]`}>
+      <body className={`${inter.className} bg-[#FFF0F3]`}>
         {children}
         <NavigationWrapper />
       </body>
