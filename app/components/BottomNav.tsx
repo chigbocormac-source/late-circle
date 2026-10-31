@@ -2,9 +2,15 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useState, useEffect } from 'react';
 
 export default function BottomNav() {
   const pathname = usePathname();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   return (
     <div className="fixed bottom-6 left-0 right-0 mx-auto w-[90%] max-w-sm z-50">
@@ -14,39 +20,39 @@ export default function BottomNav() {
         <Link 
           href="/today" 
           className={`flex items-center gap-2 px-5 py-2.5 rounded-full transition-all duration-300 ${
-            pathname === '/today' 
+            mounted && pathname === '/today' 
               ? 'bg-[#4A2C35] text-white shadow-sm' 
               : 'text-[#4A2C35]/40 hover:text-[#4A2C35]/70'
           }`}
         >
           <span className="text-[16px]">📖</span>
-          {pathname === '/today' && <span className="text-sm font-bold">Today</span>}
+          {mounted && pathname === '/today' && <span className="text-sm font-bold">Today</span>}
         </Link>
 
         {/* CYCLE TAB */}
         <Link 
           href="/cycle" 
           className={`flex items-center gap-2 px-5 py-2.5 rounded-full transition-all duration-300 ${
-            pathname === '/cycle' 
+            mounted && pathname === '/cycle' 
               ? 'bg-[#4A2C35] text-white shadow-sm' 
               : 'text-[#4A2C35]/40 hover:text-[#4A2C35]/70'
           }`}
         >
           <span className="text-[16px]">🌙</span>
-          {pathname === '/cycle' && <span className="text-sm font-bold">Cycle</span>}
+          {mounted && pathname === '/cycle' && <span className="text-sm font-bold">Cycle</span>}
         </Link>
 
         {/* MY WINS TAB */}
         <Link 
           href="/insights" 
           className={`flex items-center gap-2 px-5 py-2.5 rounded-full transition-all duration-300 ${
-            pathname === '/insights' 
+            mounted && pathname === '/insights' 
               ? 'bg-[#4A2C35] text-white shadow-sm' 
               : 'text-[#4A2C35]/40 hover:text-[#4A2C35]/70'
           }`}
         >
           <span className="text-[16px]">🏆</span>
-          {pathname === '/insights' && <span className="text-sm font-bold">My Wins</span>}
+          {mounted && pathname === '/insights' && <span className="text-sm font-bold">My Wins</span>}
         </Link>
 
       </div>
