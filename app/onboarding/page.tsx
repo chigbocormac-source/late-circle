@@ -58,7 +58,14 @@ export default function Onboarding() {
     localStorage.setItem('lateCirclePrevPeriod', prevPeriodDate);
     localStorage.setItem('lateCircleDuration', periodDuration);
     localStorage.setItem('lateCircleType', cycleType);
-    router.push('/');
+
+    // Save to history array so Wins page can show it
+    const history = JSON.parse(localStorage.getItem('lateCircleHistory') || '[]');
+    if (prevPeriodDate) history.push(prevPeriodDate);
+    if (lastPeriodDate) history.push(lastPeriodDate);
+    localStorage.setItem('lateCircleHistory', JSON.stringify(history));
+
+    router.push('/today'); // Changed from '/'
   };
 
   return (

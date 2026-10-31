@@ -106,7 +106,7 @@ export default function CyclePage() {
     localStorage.removeItem('lateCircleData');
     localStorage.removeItem('lateCircleDailyHistory');
 
-    router.push('/');
+    router.push('/today'); // <-- Changed from '/'
   };
 
   const cyclePercent = (currentDay / average) * 100;
@@ -158,7 +158,7 @@ export default function CyclePage() {
   return (
     <main className="min-h-screen bg-[#FFF0F3] text-[#4A2C35] flex flex-col items-center pt-8 px-6 pb-32 font-sans relative animate-page-enter">
 
-      <button onClick={() => router.push('/')} className="absolute top-6 left-6 text-[#4A2C35]/50 text-sm font-medium active:opacity-50">← Today</button>
+      <button onClick={() => router.push('/today')} className="absolute top-6 left-6 text-[#4A2C35]/50 text-sm font-medium active:opacity-50">← Today</button>
       <h1 className="text-2xl font-serif text-[#4A2C35] mb-3 tracking-[0.2em]">YOUR CYCLE</h1>
 
       {/* Status Pill */}

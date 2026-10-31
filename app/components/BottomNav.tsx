@@ -12,15 +12,15 @@ export default function BottomNav() {
         
         {/* TODAY TAB */}
         <Link 
-          href="/" 
+          href="/today" 
           className={`flex items-center gap-2 px-5 py-2.5 rounded-full transition-all duration-300 ${
-            pathname === '/' 
+            pathname === '/today' 
               ? 'bg-[#4A2C35] text-white shadow-sm' 
               : 'text-[#4A2C35]/40 hover:text-[#4A2C35]/70'
           }`}
         >
           <span className="text-[16px]">📖</span>
-          {pathname === '/' && <span className="text-sm font-bold">Today</span>}
+          {pathname === '/today' && <span className="text-sm font-bold">Today</span>}
         </Link>
 
         {/* CYCLE TAB */}
