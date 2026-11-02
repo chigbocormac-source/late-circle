@@ -300,9 +300,18 @@ export default function Home() {
               <span className="text-3xl">{girl.emoji}</span>
             </div>
             <h3 className="text-xl font-bold text-[#4A2C35] mb-2">Welcome to {girl.name}.</h3>
-            <p className="text-sm text-[#4A2C35]/60 mb-6 leading-relaxed italic">
+            <p className="text-sm text-[#4A2C35]/70 mb-6 leading-relaxed italic">
               "{oviWelcome[girl.id as PhaseId]}"
             </p>
+            
+            {/* NEW: THE CIRCLES TO CLOSE TODAY */}
+            <div className="bg-[#FFF0F3] border border-[#4A2C35]/10 rounded-2xl p-4 mb-6 w-full text-left">
+              <h4 className="text-[10px] font-bold text-[#4A2C35]/40 uppercase tracking-widest mb-2">Your circles today</h4>
+              <p className="text-sm font-bold text-[#4A2C35] capitalize">
+                {girl.focus.join(' + ')}
+              </p>
+            </div>
+
             <button onClick={() => setShowOviWelcome(false)} className="w-full bg-[#4A2C35] text-white py-3 rounded-full font-bold active:scale-95 shadow-[0_8px_20px_-4px_rgba(74,44,53,0.2)]">
               Okay, Ovi
             </button>
@@ -543,8 +552,14 @@ export default function Home() {
       {activeModal === 'calm' && (
         <div className="fixed inset-0 bg-[#FFF0F3] z-50 flex flex-col pt-12 px-6 overflow-y-auto">
           {calmView === 'menu' && (
-            <div className="flex flex-col h-full animate-fade-in">
-              <div className="flex flex-col items-center mb-8">
+            <div className="flex flex-col h-full animate-fade-in relative">
+              <button 
+                onClick={() => setActiveModal(null)} 
+                className="absolute top-0 left-0 text-[#4A2C35]/50 text-sm font-medium active:opacity-50 flex items-center gap-1"
+              >
+                ← Back
+              </button>
+              <div className="flex flex-col items-center mb-8 pt-6">
                 <h1 className="text-3xl font-bold text-[#4A2C35] mb-2">Late Circle</h1>
                 <p className="text-sm text-[#4A2C35]/50">Calm tools for your night</p>
               </div>

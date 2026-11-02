@@ -9,11 +9,15 @@ export function getCyclePhase(day: number, average: number = 35) {
 }
 
 export const oviWelcome: Record<PhaseId, string> = {
-  rest: "Tired small? That's normal. Warm water and early sleep. You are doing well 💜",
-  fresh: "Energy coming back? Good. Try walk small to the junction today. No gym wear needed 💚",
-  fine: "Fine girl era ✨ High energy today. Good day to take a picture, do assignment, talk to people.",
-  chop: "You will want 2 plates of rice and snap at anyone. Na hormone, not you. Eat rice + beans. Walk small 😂",
-  ready: "Tired and want to be alone? Pad in bag from today. Your pattern says period near. You are safe 💜"
+  rest: "You are in your Rest phase. Your womb is shedding its lining, so your energy is naturally low right now. Don't force yourself to do too much. Focus on Sleep + Calm today. You are doing well 💜",
+  
+  fresh: "You are in your Fresh phase. Estrogen is rising, and your body is rebuilding. Your energy is coming back! This is a great time to move a little. Focus on Walk + Food today 🌱",
+  
+  fine: "You are in your Fine phase. You are ovulating, which means your energy and confidence are at their peak. Your skin is glowing. Use this energy for your work or take that picture. You can close all 4 today ✨",
+  
+  chop: "You are in your Chop phase. Progesterone is rising, which makes your body crave extra energy and makes you feel more emotional. It's just hormones, not you. If you want more food, add protein to your plate. Focus on Food + Calm + Walk today 🍚",
+  
+  ready: "You are in your Ready phase. Progesterone is dropping, which is why you feel tired, bloated, or moody. Your period is near. Keep a pad in your bag and be gentle with yourself. Focus on Sleep + Calm today 💜"
 };
 
 export const oviGists: Record<PhaseId, Record<string, string>> = {
@@ -39,7 +43,7 @@ export const oviGists: Record<PhaseId, Record<string, string>> = {
     food: "You want to eat plenty today. Make your plate smaller. Add enough protein or veggies if you can. Just don't overeat, so you don't feel heavy later.",
     walk: "Eaten plenty? Walk 20 minutes after food. It helps digestion and your belly.",
     sleep: "If you eat late and sleep late, your belly will bloat tomorrow. Close food before 9pm.",
-    calm: "Want to snap at someone? Before you reply, do 90 seconds calm. Breathe in, out."
+    calm: "Want to snap at someone? Take 90 seconds. Breathe in, out. You will not regret it."
   },
   ready: {
     food: "Bloat is gas, not fat. Keep eba/rice small. Add plenty soup and vegetables. Close food before 9pm.",
