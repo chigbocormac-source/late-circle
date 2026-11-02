@@ -37,3 +37,14 @@
   animation: smooth-enter 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
   will-change: transform, opacity, filter;
 }
+
+/* NEW: Glowing priority ring */
+@keyframes glow-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(156, 175, 136, 0.7); }
+  70% { box-shadow: 0 0 0 15px rgba(156, 175, 136, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(156, 175, 136, 0); }
+}
+
+.animate-glow {
+  animation: glow-pulse 2s infinite;
+}
