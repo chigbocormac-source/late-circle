@@ -117,41 +117,41 @@ export default function CyclePage() {
   if (!isLoaded) return null;
 
   // Data for the Explainer Modal
-  const girlData: Record<string, any> = {
+    const girlData: Record<string, any> = {
     rest: {
       title: "🌙 Rest Girl", days: "Day 1-5",
-      why: "Your womb is shedding its lining. That takes energy. That's why you are tired.",
+      why: "These days your body is resting from bleeding. It takes energy. That is why you feel tired.",
       feel: "Cramps, tired, wants to sleep, low energy, wants hot water.",
-      want: "Rice soft, Indomie small, hot tea, sleep.",
-      circles: "Close Green: SLEEP + CALM only. FOOD = small Green, no pressure. WALK = leave open, you are resting."
+      want: "Soft rice, small Indomie, hot tea, sleep.",
+      circles: "To close Sleep: Sleep before 11pm. 7 hours is a win.\nTo close Calm: Do 90 seconds of calm. Breathe, no phone.\nTo close Food: Eat something small. Tea + small rice is enough.\nTo close Walk: Leave it open. No walking needed.\nTo win today = close Sleep + Calm."
     },
     fresh: {
       title: "🌱 Fresh Girl", days: "Day 6-12",
-      why: "Estrogen is rising. Your body is rebuilding. That's why your energy is coming back.",
-      feel: "Energy coming back, less tired, wants to gist.",
-      want: "Normal appetite returns, to go out small, to do chores.",
-      circles: "Best time to build streak. Close Green: WALK + FOOD. They are easy now. SLEEP + CALM = bonus."
+      why: "Bleeding has finished. Your energy is slowly coming back. That is why you feel better.",
+      feel: "Energy coming back, less tired, wants to talk.",
+      want: "Normal appetite, to go out a little, to do chores.",
+      circles: "To close Walk: Walk for 15 minutes outside.\nTo close Food: Eat one full meal with protein and vegetables.\nTo close Sleep: Sleep before 11pm.\nTo close Calm: Do 90 seconds of calm.\nBest time to build streak. Walk + Food are easiest now."
     },
     fine: {
       title: "✨ Fine Girl", days: "Day 13-23",
-      why: "Ovulation is happening. Your body is at its peak. That's why you feel fine and glowing.",
-      feel: "Fine, glowing, fine face, high energy, wants picture, wants to talk, confident. Assignment feels easy.",
+      why: "You are in your shine days. You feel fine, glowing and confident. That is your pattern.",
+      feel: "Fine, glowing, high energy, wants pictures, wants to talk, confident. Work feels easy.",
       want: "To go out, selfie, talk to people.",
-      circles: "You can close all 4 Green today, it's easy. If you do one: Close WALK Green, use that energy."
+      circles: "To close Walk: Walk for 20 minutes. Use that high energy.\nTo close Food: Eat one full meal with protein and vegetables.\nTo close Sleep: Sleep before 11pm.\nTo close Calm: Do 90 seconds of calm.\nYou can win all 4 these days. If you do one, do Walk first."
     },
     chop: {
-      title: "🍚 Chop Girl", days: "Day 24-30",
-      why: "Progesterone is high. Your body is preparing for a possible pregnancy. That's why you want to eat everything and snap.",
-      feel: "Hungry hungry hungry, wants 2 plates rice, puff puff, shawarma, craves sweet, snaps at boyfriend, annoyed small, wants to eat everything.",
-      want: "indomie, Ice cream, Garri, eba, puff puff, biscuits by 10pm, to stay inside.",
-      circles: "Hardest days. Close Green: FOOD + SLEEP + CALM. FOOD = add protein/veg to your rice to make it Green. SLEEP before 11pm. WALK = bonus, not must."
+      title: "🍚 Chop Girl", days: "Day 24 to Last 7 days before period",
+      why: "Chop Girl loves to chop. These days your body wants extra energy. That is why you want to eat everything.",
+      feel: "Very hungry, wants 2 plates of rice, puff puff, shawarma, craves sweet, gets annoyed easily.",
+      want: "Indomie, ice cream, garri, eba, puff puff, biscuits by 10pm, to stay inside.",
+      circles: "To close Food: Add protein or vegetables to your rice plate. One plate like that closes Food.\nTo close Sleep: Sleep before 11pm. Set alarm.\nTo close Calm: Do 90 seconds of calm when you crave or feel like snapping.\nTo close Walk: Optional. 10 minutes if you can, but you can leave it open.\nHardest days. Win = Food + Sleep + Calm."
     },
     ready: {
-      title: "💜 Ready Girl", days: "Day 31-35",
-      why: "Progesterone is dropping. Your body is getting ready to bleed. That's why you are tired, bloated, and emotional.",
+      title: "💜 Ready Girl", days: "Last 7 days before next period",
+      why: "Your period is close. Your body is slowing down. That is why you feel tired, bloated and emotional.",
       feel: "Tired again, moody, back pain, small bloat, wants to be alone.",
-      want: "To stay inside, sleep, ice cream, gifts, petting, sweet names.",
-      circles: "Close Green: SLEEP before 10:30pm + CALM 90 secs. FOOD + WALK = leave open if tired. Pad in bag from today."
+      want: "To stay inside, sleep, ice cream, gifts, sweet names.",
+      circles: "To close Sleep: Sleep before 10:30pm.\nTo close Calm: Do 90 seconds of calm.\nTo close Food: Leave open if tired. If you eat, small food counts.\nTo close Walk: Leave open if tired.\nExtra: Put a pad in your bag from today.\nTo win today = close Sleep + Calm."
     }
   };
 
@@ -335,7 +335,7 @@ export default function CyclePage() {
                 </div>
                 <div>
                   <h3 className="text-[10px] font-bold text-[#4A2C35]/40 uppercase tracking-widest mb-1">Your circles</h3>
-                  <p className="text-sm text-[#4A2C35] leading-relaxed">{data.circles}</p>
+                  <p className="text-sm text-[#4A2C35] leading-relaxed whitespace-pre-line">{data.circles}</p>
                 </div>
               </div>
 

@@ -294,7 +294,7 @@ export default function Home() {
       )}
 
       {showOviWelcome && (
-        <div className="fixed inset-0 bg-[#4A2C35]/20 backdrop-blur-sm z-110 flex items-center justify-center p-6 animate-fade-in">
+        <div className="fixed inset-0 bg-[#4A2C35]/20 backdrop-blur-sm z-110 flex items-start justify-center pt-12 p-6 animate-fade-in">
           <div className="bg-white border border-[#4A2C35]/5 rounded-3xl p-6 w-full max-w-sm shadow-[0_24px_48px_-16px_rgba(74,44,53,0.25)] text-center">
             <div className="w-16 h-16 rounded-full bg-[#FFF0F3] flex items-center justify-center mx-auto mb-4">
               <span className="text-3xl">{girl.emoji}</span>
@@ -304,7 +304,7 @@ export default function Home() {
               "{oviWelcome[girl.id as PhaseId]}"
             </p>
             
-            {/* NEW: THE CIRCLES TO CLOSE TODAY */}
+            {/* THE CIRCLES TO CLOSE TODAY */}
             <div className="bg-[#FFF0F3] border border-[#4A2C35]/10 rounded-2xl p-4 mb-6 w-full text-left">
               <h4 className="text-[10px] font-bold text-[#4A2C35]/40 uppercase tracking-widest mb-2">Your circles today</h4>
               <p className="text-sm font-bold text-[#4A2C35] capitalize">

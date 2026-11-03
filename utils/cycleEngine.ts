@@ -1,25 +1,31 @@
 export type PhaseId = 'rest' | 'fresh' | 'fine' | 'chop' | 'ready';
 
 export function getCyclePhase(day: number, average: number = 35) {
+  const daysToNext = average - day;
+
   if (day <= 5) return { id: 'rest' as PhaseId, name: 'Rest Girl', emoji: '🌙', color: '#9CAF88', focus: ['sleep', 'walk'] };
   if (day <= 12) return { id: 'fresh' as PhaseId, name: 'Fresh Girl', emoji: '🌱', color: '#9CAF88', focus: ['walk', 'food'] };
   if (day <= 23) return { id: 'fine' as PhaseId, name: 'Fine Girl', emoji: '✨', color: '#D4AF37', focus: ['food', 'walk', 'sleep', 'calm'] };
-  if (day <= 30) return { id: 'chop' as PhaseId, name: 'Chop Girl', emoji: '🍚', color: '#FF8FA3', focus: ['food', 'calm', 'walk'] };
-  return { id: 'ready' as PhaseId, name: 'Ready Girl', emoji: '💜', color: '#8A2C3E', focus: ['sleep', 'calm', 'food'] };
+  
+  // If we are in the last 7 days before the next period, it's Ready Girl
+  if (daysToNext <= 7) {
+    return { id: 'ready' as PhaseId, name: 'Ready Girl', emoji: '💜', color: '#8A2C3E', focus: ['sleep', 'calm', 'food'] };
+  }
+  
+  // Otherwise, it's Chop Girl (Day 24 up to the last 7 days)
+  return { id: 'chop' as PhaseId, name: 'Chop Girl', emoji: '🍚', color: '#FF8FA3', focus: ['food', 'calm', 'walk'] };
 }
 
 export const oviWelcome: Record<PhaseId, string> = {
-  rest: "You are in your Rest phase. Your womb is shedding its lining, so your energy is naturally low right now. Don't force yourself to do too much. Focus on Sleep + Calm today. You are doing well 💜",
-  
-  fresh: "You are in your Fresh phase. Estrogen is rising, and your body is rebuilding. Your energy is coming back! This is a great time to move a little. Focus on Walk + Food today 🌱",
-  
-  fine: "You are in your Fine phase. You are ovulating, which means your energy and confidence are at their peak. Your skin is glowing. Use this energy for your work or take that picture. You can close all 4 today ✨",
-  
-  chop: "You are in your Chop phase. Progesterone is rising, which makes your body crave extra energy and makes you feel more emotional. It's just hormones, not you. If you want more food, add protein to your plate. Focus on Food + Calm + Walk today 🍚",
-  
-  ready: "You are in your Ready phase. Progesterone is dropping, which is why you feel tired, bloated, or moody. Your period is near. Keep a pad in your bag and be gentle with yourself. Focus on Sleep + Calm today 💜"
+  rest: "You are in your Rest days. Your body is resting from bleeding. That is why you feel tired. Rest well today.",
+  fresh: "You are in your Fresh days. Bleeding has finished and your energy is coming back. It is a good time to start again.",
+  fine: "You are in your Fine days. You feel fine, glowing and confident. Use this energy to do more today.",
+  chop: "You are in your Chop days. You want to eat everything and feel more emotional. It is your pattern, not you.",
+  ready: "You are in your Ready days. Your period is close and your body is slowing down. Put a pad in your bag today."
 };
 
+// Note: The text below is for the 5 Girls Explainer Modal. 
+// We will use this in the next file we update.
 export const oviGists: Record<PhaseId, Record<string, string>> = {
   rest: {
     food: "No appetite? It's normal. Keep small plate. Indomie? Add 2 eggs and cabbage.",

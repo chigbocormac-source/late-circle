@@ -94,7 +94,7 @@ export default function Onboarding() {
             Built specifically for the Nigerian woman. No foreign diets, no gym bills. Just your everyday food, normal walks, and real rest. No scary predictions. Just 4 small things a day.
           </p>
           <button onClick={() => setStep(1)} className="w-full bg-[#4A2C35] text-white py-4 rounded-full text-[16px] font-bold mt-auto active:scale-[0.98] shadow-[0_16px_32px_-8px_rgba(74,44,53,0.35),0_6px_16px_-6px_rgba(74,44,53,0.2)] transition-all duration-300">
-            Show me how to balance my body →
+            Show me how to stay balanced →
           </button>
           <p className="text-[9px] text-[#4A2C35]/30 text-center mt-6 tracking-wide">Not a medical diagnosis. Lifestyle tracking only.</p>
         </div>
@@ -110,7 +110,7 @@ export default function Onboarding() {
           <p className="text-[#4A2C35]/60 text-[15px] leading-relaxed px-2 mb-12">
             I won't give you 10 rules or foreign diets. I manage 4 circles daily: Food, Walk, Sleep, Calm.
             <br/><br/>
-            You close them every day to keep your body balanced. And when your period is late, these same circles keep you calm while you wait.
+            You close them every day. Small wins, every day.
           </p>
           <button onClick={() => setStep(2)} className="w-full bg-[#4A2C35] text-white py-4 rounded-full text-[16px] font-bold mt-auto active:scale-[0.98] shadow-[0_16px_32px_-8px_rgba(74,44,53,0.35),0_6px_16px_-6px_rgba(74,44,53,0.2)] transition-all">
             Okay Ovi, let's start →
@@ -122,7 +122,7 @@ export default function Onboarding() {
       {step === 2 && (
         <div className="flex flex-col flex-1 w-full max-w-sm animate-slide-up overflow-y-auto pb-4">
           <h1 className="text-[26px] font-bold leading-tight mb-2 text-center">Let's know your pattern.</h1>
-          <p className="text-[#4A2C35]/50 text-xs mb-6 text-center">This stays on your phone only. 🔒 So I can predict honestly, not like Flo.</p>
+          <p className="text-[#4A2C35]/50 text-xs mb-6 text-center">This stays on your phone only. 🔒 So I can learn your real pattern.</p>
           
           <div className="flex flex-col gap-6 w-full mb-8">
             <div>
@@ -195,7 +195,7 @@ export default function Onboarding() {
                 </div>
                 {prevPeriodDate && <p className="text-[13px] font-bold text-[#4A2C35] bg-[#FFF0F3] px-3 py-1 rounded-full">= {prediction.realDiffDays} days</p>}
               </div>
-              <p className="text-[16px] font-bold text-[#4A2C35] mb-1">Next: {prediction.nextRange}</p>
+              <p className="text-[16px] font-bold text-[#4A2C35] mb-1">Next: Around {prediction.nextRange}</p>
               <p className="text-[12px] text-[#4A2C35]/50 mb-1">Keep pad handy from {prediction.nextRange.split(' - ')[0]}</p>
             </div>
 
@@ -225,25 +225,16 @@ export default function Onboarding() {
           
           <h1 className="text-[24px] font-bold leading-tight mb-2">Your first 7 days</h1>
           <p className="text-[13px] text-[#4A2C35]/50 mb-6 px-4">
-            Late Circle is daily, not just 7 days. But the first 7 days teach your body the rhythm.
+            Late Circle is daily. But the first 7 days teach your body the rhythm.
           </p>
 
           <div className="bg-white rounded-2xl p-5 w-full text-left mb-6 shadow-[0_8px_30px_rgba(74,44,53,0.06)]">
             <p className="text-[13px] text-[#4A2C35]/70 leading-relaxed mb-4">
-              We can't reset your cycle in 7 days. That takes weeks of steady habits. But in 7 days of closing 2 circles a day, many girls feel:
+              In 7 days of closing 2 circles a day, many girls feel less bloating at night, more energy after food, and easier sleep.
             </p>
-            <ul className="text-[13px] text-[#4A2C35] font-medium space-y-2">
-              <li className="flex items-center gap-2">✓ Less bloating at night</li>
-              <li className="flex items-center gap-2">✓ More energy after food</li>
-              <li className="flex items-center gap-2">✓ Sleep comes easier</li>
-              <li className="flex items-center gap-2">✓ Less mood crash</li>
-            </ul>
-          </div>
-
-          <div className="bg-[#FFF0F3] border border-[#4A2C35]/10 rounded-2xl p-5 w-full mb-8 text-center">
-            <p className="text-[15px] font-bold text-[#4A2C35] mb-1">Close 2 circles = win today</p>
-            <p className="text-[15px] font-bold text-[#4A2C35] mb-3">Close 4 = full circle ✨</p>
-            <p className="text-[13px] text-[#4A2C35]/60 leading-relaxed">Your first 7 days of small wins.<br/>Can you show up?</p>
+            <p className="text-[13px] text-[#4A2C35] font-bold">
+              Close 2 = win today. Close 4 = full win.
+            </p>
           </div>
 
           <button onClick={handleFinish} className="w-full bg-[#4A2C35] text-white py-4 rounded-full text-[16px] font-bold shadow-[0_16px_32px_-8px_rgba(74,44,53,0.35)] active:scale-[0.98] transition-all">
