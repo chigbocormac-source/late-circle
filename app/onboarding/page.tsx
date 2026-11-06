@@ -11,6 +11,15 @@ export default function Onboarding() {
   const [prevPeriodDate, setPrevPeriodDate] = useState('');
   const [periodDuration, setPeriodDuration] = useState('');
   const [cycleType, setCycleType] = useState('');
+  const [symptoms, setSymptoms] = useState<string[]>([]);
+
+  const toggleSymptom = (s: string) => {
+    if (symptoms.includes(s)) {
+      setSymptoms(symptoms.filter(x => x !== s));
+    } else {
+      setSymptoms([...symptoms, s]);
+    }
+  };
 
   const calculatePrediction = () => {
     let averageCycle = 35; 
@@ -46,6 +55,7 @@ export default function Onboarding() {
       nextRange: `${formatDate(nextStart)} - ${formatDate(nextEnd)}`,
       averageCycle,
       realDiffDays,
+      isIrregular: realDiffDays > 35
     };
   };
 
@@ -55,12 +65,11 @@ export default function Onboarding() {
     localStorage.setItem('lateCirclePrevPeriod', prevPeriodDate);
     localStorage.setItem('lateCircleDuration', periodDuration);
     localStorage.setItem('lateCircleType', cycleType);
+    localStorage.setItem('lateCircleSymptoms', JSON.stringify(symptoms));
     
-    // Save 7-day promise
     localStorage.setItem('lateCirclePromised7Days', 'true');
     localStorage.setItem('lateCircleCommitDate', new Date().toISOString());
 
-    // Save history
     const history = JSON.parse(localStorage.getItem('lateCircleHistory') || '[]');
     if (prevPeriodDate) history.push(prevPeriodDate);
     if (lastPeriodDate) history.push(lastPeriodDate);
@@ -72,9 +81,9 @@ export default function Onboarding() {
   return (
     <main className="min-h-screen bg-[#FFF0F3] text-[#4A2C35] flex flex-col items-center pt-12 px-6 font-sans pb-8">
       
-      {/* PROGRESS BAR (5 steps) */}
-      <div className="w-full max-w-sm flex gap-2 mb-10">
-        {[0, 1, 2, 3, 4].map(s => (
+      {/* PROGRESS BAR (10 steps) */}
+      <div className="w-full max-w-sm flex gap-1.5 mb-8">
+        {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map(s => (
           <div key={s} className={`h-1.5 flex-1 rounded-full transition-all duration-500 ${step >= s ? 'bg-[#4A2C35] shadow-[0_2px_8px_rgba(74,44,53,0.2)]' : 'bg-[#4A2C35]/10'}`}></div>
         ))}
       </div>
@@ -177,13 +186,13 @@ export default function Onboarding() {
         </div>
       )}
 
-      {/* SCREEN 3: PREDICTION REVEAL */}
+      {/* SCREEN 3: HONEST REVEAL */}
       {step === 3 && (() => {
         const prediction = calculatePrediction();
         return (
           <div className="flex flex-col items-center flex-1 w-full max-w-sm animate-slide-up overflow-y-auto pb-4">
             <h1 className="text-[26px] font-bold leading-tight mb-2 text-center">
-              You are {prediction.cycleText}. That is your normal, not late. 💜
+              {prevPeriodDate ? `You are a ${prediction.cycleText}.` : `Your last cycle was ${prediction.averageCycle} days.`} Your body is talking. Let's listen. 💜
             </h1>
 
             <div className="w-full bg-white rounded-[20px] p-5 border border-white shadow-[0_24px_48px_-16px_rgba(74,44,53,0.12),0_12px_24px_-12px_rgba(255,182,193,0.2)] mb-6 mt-4">
@@ -195,18 +204,18 @@ export default function Onboarding() {
                 </div>
                 {prevPeriodDate && <p className="text-[13px] font-bold text-[#4A2C35] bg-[#FFF0F3] px-3 py-1 rounded-full">= {prediction.realDiffDays} days</p>}
               </div>
-              <p className="text-[16px] font-bold text-[#4A2C35] mb-1">Next: Around {prediction.nextRange}</p>
-              <p className="text-[12px] text-[#4A2C35]/50 mb-1">Keep pad handy from {prediction.nextRange.split(' - ')[0]}</p>
-            </div>
-
-            <div className="w-full mb-6">
-              <p className="text-[11px] font-bold text-[#4A2C35]/40 uppercase tracking-widest mb-3 text-center">How you stay normal</p>
-              <div className="grid grid-cols-2 gap-2.5">
-                <div className="bg-white p-3.5 rounded-2xl border border-white shadow-sm flex items-center gap-2.5"><span className="text-sm w-7 h-7 bg-[#FFF0F3] rounded-full flex items-center justify-center">🍲</span><p className="text-[11px] font-semibold leading-tight">Last food before 9pm</p></div>
-                <div className="bg-white p-3.5 rounded-2xl border border-white shadow-sm flex items-center gap-2.5"><span className="text-sm w-7 h-7 bg-[#E8F0E0] rounded-full flex items-center justify-center">👟</span><p className="text-[11px] font-semibold leading-tight">20 mins, no gym</p></div>
-                <div className="bg-white p-3.5 rounded-2xl border border-white shadow-sm flex items-center gap-2.5"><span className="text-sm w-7 h-7 bg-[#FFF0F3] rounded-full flex items-center justify-center">🌙</span><p className="text-[11px] font-semibold leading-tight">In bed by 10:30pm</p></div>
-                <div className="bg-white p-3.5 rounded-2xl border border-white shadow-sm flex items-center gap-2.5"><span className="text-sm w-7 h-7 bg-[#EDE8FF] rounded-full flex items-center justify-center">🧠</span><p className="text-[11px] font-semibold leading-tight">90 secs of quiet</p></div>
-              </div>
+{prediction.realDiffDays > 35 ? (
+  <p className="text-[12px] text-[#4A2C35]/60 mb-3">That's longer than the 21-35 day range. Let's track it.</p>
+) : (
+  <p className="text-[12px] text-[#4A2C35]/60 mb-3">That's within the normal 21-35 day range. Let's keep it steady.</p>
+)}
+              <p className="text-[16px] font-bold text-[#4A2C35] mb-1">Next window: {prediction.nextRange}</p>
+              <p className="text-[12px] text-[#4A2C35]/50 mb-1">
+  Keep pad handy from {prediction.nextRange.split(' - ')[0]}. 
+  {prediction.realDiffDays > 35 
+    ? " Your pattern is irregular, so this is a window, not a promise." 
+    : " This is your normal window."}
+</p>
             </div>
 
             <button onClick={() => setStep(4)} className="w-full bg-[#4A2C35] text-white py-4 rounded-full font-bold shadow-[0_16px_32px_-8px_rgba(74,44,53,0.35)] mt-auto active:scale-[0.98] transition-all">
@@ -216,8 +225,155 @@ export default function Onboarding() {
         );
       })()}
 
-      {/* SCREEN 4: 7-DAY COMMITMENT */}
+      {/* SCREEN 4: SYMPTOMS */}
       {step === 4 && (
+        <div className="flex flex-col flex-1 w-full max-w-sm animate-slide-up overflow-y-auto pb-4">
+          <h1 className="text-[24px] font-bold leading-tight mb-2 text-center">What have you noticed lately?</h1>
+          <p className="text-[13px] text-[#4A2C35]/60 text-center mb-6 px-4">
+            Tick anything you have noticed. We will just track them together. This is not a diagnosis.
+          </p>
+          
+          <div className="flex flex-col gap-2 w-full mb-8">
+            {['Period often late or missing', 'Pimples that don\'t go away easily', 'Hair on chin, chest, or stomach', 'Hair on head feeling thinner', 'Cravings for sweet / starchy food', 'Weight gain around belly', 'Dark patches on neck or underarm', 'Feeling tired or stressed often'].map(s => (
+              <button key={s} onClick={() => toggleSymptom(s)} className={`p-3.5 rounded-xl text-left border text-[13px] font-medium transition-all ${symptoms.includes(s) ? 'border-[#4A2C35] bg-white text-[#4A2C35] shadow-sm' : 'border-white bg-white/70 text-[#4A2C35]/60'}`}>
+                {s}
+              </button>
+            ))}
+            <button onClick={() => setSymptoms([])} className={`p-3.5 rounded-xl text-left border text-[13px] font-medium transition-all ${symptoms.length === 0 ? 'border-[#4A2C35] bg-white text-[#4A2C35] shadow-sm' : 'border-white bg-white/70 text-[#4A2C35]/60'}`}>
+              None of these / Prefer not to say
+            </button>
+          </div>
+
+          <div className="flex gap-3 w-full mt-auto">
+            <button onClick={() => setStep(3)} className="flex-1 border border-white bg-white/80 py-4 rounded-full font-bold text-[#4A2C35]/60 active:scale-[0.98]">Back</button>
+            <button onClick={() => setStep(5)} className="flex-2 py-4 rounded-full font-bold bg-[#4A2C35] text-white shadow-[0_16px_32px_-8px_rgba(74,44,53,0.35)] active:scale-[0.98]">
+              Save and Continue →
+            </button>
+          </div>
+          <p className="text-[10px] text-[#4A2C35]/40 mt-3 text-center">Only you see this. This is not a diagnosis.</p>
+        </div>
+      )}
+
+      {/* SCREEN 5: 4 CIRCLES */}
+      {step === 5 && (
+        <div className="flex flex-col items-center text-center flex-1 w-full max-w-sm animate-slide-up">
+          <h1 className="text-[26px] font-bold leading-tight mb-2">The 4 Circles</h1>
+          <p className="text-[14px] text-[#4A2C35]/60 leading-relaxed mb-8 px-2">
+            Hormones respond to daily life. Every day you work on 4 small wins: Food, Calm, Walk, Sleep.
+          </p>
+
+          <div className="w-full flex flex-col gap-3 mb-8">
+            <div className="bg-white p-4 rounded-2xl shadow-sm flex items-center gap-3"><span className="text-2xl w-10 h-10 bg-[#FFF0F3] rounded-full flex items-center justify-center">🍲</span><p className="text-[14px] font-bold">Food</p></div>
+            <div className="bg-white p-4 rounded-2xl shadow-sm flex items-center gap-3"><span className="text-2xl w-10 h-10 bg-[#9CAF88]/15 rounded-full flex items-center justify-center">🧠</span><p className="text-[14px] font-bold">Calm</p></div>
+            <div className="bg-white p-4 rounded-2xl shadow-sm flex items-center gap-3"><span className="text-2xl w-10 h-10 bg-[#E8F0E0] rounded-full flex items-center justify-center">👟</span><p className="text-[14px] font-bold">Walk</p></div>
+            <div className="bg-white p-4 rounded-2xl shadow-sm flex items-center gap-3"><span className="text-2xl w-10 h-10 bg-[#EDE8FF] rounded-full flex items-center justify-center">🌙</span><p className="text-[14px] font-bold">Sleep</p></div>
+          </div>
+
+          <div className="bg-[#4A2C35]/5 rounded-2xl p-4 mb-8 w-full">
+            <p className="text-[13px] font-bold text-[#4A2C35]">Close 2 = win today. Close 4 = full win.</p>
+            <p className="text-[11px] text-[#4A2C35]/60 mt-1">You don't need to be perfect. Small, consistent wins support your cycle.</p>
+          </div>
+
+          <button onClick={() => setStep(6)} className="w-full bg-[#4A2C35] text-white py-4 rounded-full font-bold shadow-[0_16px_32px_-8px_rgba(74,44,53,0.35)] mt-auto active:scale-[0.98] transition-all">
+            I understand →
+          </button>
+        </div>
+      )}
+
+      {/* SCREEN 6: 5 GIRLS */}
+      {step === 6 && (
+        <div className="flex flex-col flex-1 w-full max-w-sm animate-slide-up overflow-y-auto pb-4">
+          <h1 className="text-[26px] font-bold leading-tight mb-2 text-center">5 Girls in 1 Body</h1>
+          <p className="text-[13px] text-[#4A2C35]/60 text-center mb-6 px-4">
+            Your body is not one mood. You are:
+          </p>
+
+          <div className="flex flex-col gap-2 w-full mb-8">
+            <div className="bg-white p-3.5 rounded-xl border border-[#4A2C35]/5 flex justify-between items-center">
+              <span className="text-[13px] font-bold">🌙 Rest Girl (Days 1-4)</span>
+              <span className="text-[11px] text-[#4A2C35]/50">Bleeding, rest</span>
+            </div>
+            <div className="bg-white p-3.5 rounded-xl border border-[#4A2C35]/5 flex justify-between items-center">
+              <span className="text-[13px] font-bold">🌱 Fresh Girl (Days 5-12)</span>
+              <span className="text-[11px] text-[#4A2C35]/50">Light, active</span>
+            </div>
+            <div className="bg-white p-3.5 rounded-xl border border-[#4A2C35]/5 flex justify-between items-center">
+              <span className="text-[13px] font-bold">✨ Fine Girl (Days 13-23)</span>
+              <span className="text-[11px] text-[#4A2C35]/50">Confident, glowing</span>
+            </div>
+            <div className="bg-white p-3.5 rounded-xl border border-[#4A2C35]/5 flex justify-between items-center">
+              <span className="text-[13px] font-bold">🍚 Chop Girl (Days 24-30)</span>
+              <span className="text-[11px] text-[#4A2C35]/50">Hungry, cravings</span>
+            </div>
+            <div className="bg-white p-3.5 rounded-xl border border-[#4A2C35]/5 flex justify-between items-center">
+              <span className="text-[13px] font-bold">💜 Ready Girl (Days 31-40+)</span>
+              <span className="text-[11px] text-[#4A2C35]/50">Waiting, preparing</span>
+            </div>
+          </div>
+
+          <p className="text-[13px] text-[#4A2C35] font-bold text-center mb-8">
+            Know which girl you are, and you will stop fighting yourself.
+          </p>
+
+          <button onClick={() => setStep(7)} className="w-full bg-[#4A2C35] text-white py-4 rounded-full font-bold shadow-[0_16px_32px_-8px_rgba(74,44,53,0.35)] mt-auto active:scale-[0.98] transition-all">
+            I understand →
+          </button>
+        </div>
+      )}
+
+      {/* SCREEN 7: NIGERIAN FOOD + DOCTOR */}
+      {step === 7 && (
+        <div className="flex flex-col items-center text-center flex-1 w-full max-w-sm animate-slide-up">
+          <h1 className="text-[26px] font-bold leading-tight mb-6">Nigerian Food, Real Life</h1>
+          
+          <div className="bg-white p-5 rounded-2xl shadow-sm mb-6 w-full text-left">
+            <p className="text-[14px] font-bold text-[#4A2C35] mb-2">No foreign diet.</p>
+            <p className="text-[13px] text-[#4A2C35]/60 leading-relaxed">
+              We use what you actually eat. Indomie + egg. Eba. Rice and stew. We know NEPA, stress, school, work, and lack of sleep affect your period.
+            </p>
+          </div>
+
+          <div className="bg-white p-5 rounded-2xl shadow-sm mb-8 w-full text-left">
+            <p className="text-[14px] font-bold text-[#4A2C35] mb-2">A history for your doctor.</p>
+            <p className="text-[13px] text-[#4A2C35]/60 leading-relaxed">
+              Late Circle is not a doctor. But it gives you a clear record of your cycle, your symptoms, and your 4 circles. Show it to your doctor, pharmacist, or nurse.
+            </p>
+          </div>
+
+          <button onClick={() => setStep(8)} className="w-full bg-[#4A2C35] text-white py-4 rounded-full font-bold shadow-[0_16px_32px_-8px_rgba(74,44,53,0.35)] mt-auto active:scale-[0.98] transition-all">
+            I understand →
+          </button>
+        </div>
+      )}
+
+      {/* SCREEN 8: HONEST TRUTH */}
+      {step === 8 && (
+        <div className="flex flex-col items-center text-center flex-1 w-full max-w-sm animate-slide-up justify-center">
+          <h1 className="text-[26px] font-bold leading-tight mb-4">The Honest Truth</h1>
+          
+          <p className="text-[14px] text-[#4A2C35]/70 leading-relaxed mb-5 px-2">
+            A normal cycle is 21 to 35 days. If yours is often 40, 45, or 50 days, it just means your body is working a little harder. It is not a curse, and it is not your fault.
+          </p>
+          <p className="text-[14px] text-[#4A2C35]/70 leading-relaxed mb-5 px-2">
+            It might be stress, hormones, or PCOS. Whatever it is, you don't have to figure it out alone.
+          </p>
+          <p className="text-[14px] text-[#4A2C35]/70 leading-relaxed mb-8 px-2">
+            Late Circle won't cure PCOS. But it will help you track your pattern, manage your daily habits, and give you a clear record to show a doctor when you are ready.
+          </p>
+          
+          <p className="text-[15px] text-[#4A2C35] font-bold px-2 mb-8">
+            You are not broken. Your body is talking. Let's listen together. 💜
+          </p>
+
+          <button onClick={() => setStep(9)} className="w-full bg-[#4A2C35] text-white py-4 rounded-full font-bold shadow-[0_16px_32px_-8px_rgba(74,44,53,0.35)] mt-auto active:scale-[0.98] transition-all">
+            I understand →
+          </button>
+          <p className="text-[9px] text-[#4A2C35]/30 mt-4 px-2">Lifestyle tracking only. Not a medical diagnosis. If your period is 90+ days late, please see a doctor.</p>
+        </div>
+      )}
+
+      {/* SCREEN 9: 7-DAY PROMISE (FINAL CTA) */}
+      {step === 9 && (
         <div className="flex flex-col items-center text-center flex-1 w-full max-w-sm animate-slide-up overflow-y-auto pb-4">
           <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mb-6 mt-4 shadow-sm border border-white">
             <span className="text-2xl">🌙</span>
@@ -241,7 +397,7 @@ export default function Onboarding() {
             Yes, I will show up for 7 days 💚
           </button>
           <p className="text-[10px] text-[#4A2C35]/40 mt-4 text-center px-4">
-            Your promise to yourself. Not to us. Day 1 starts today. We keep going daily.
+            Your promise to yourself. Not to us. Day 1 starts today.
           </p>
         </div>
       )}

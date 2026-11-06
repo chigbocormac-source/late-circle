@@ -160,9 +160,9 @@ export default function MyWins() {
           <p className="text-[10px] text-[#4A2C35]/50">circles closed</p>
         </div>
         <div className="flex-1 bg-white border border-[#4A2C35]/5 rounded-2xl p-4 shadow-[0_8px_20px_-8px_rgba(74,44,53,0.08)]">
-          <h3 className="text-[10px] font-bold text-[#4A2C35]/40 uppercase tracking-wider mb-1">Streak</h3>
-          <p className="text-2xl font-bold text-[#FF8FA3]">🔥 {streak}</p>
-          <p className="text-[10px] text-[#4A2C35]/50">days in a row</p>
+          <h3 className="text-[10px] font-bold text-[#4A2C35]/40 uppercase tracking-wider mb-1">Consistency</h3>
+          <p className="text-2xl font-bold text-[#FF8FA3]">🌱 {streak}</p>
+          <p className="text-[10px] text-[#4A2C35]/50">days this week</p>
         </div>
       </div>
 

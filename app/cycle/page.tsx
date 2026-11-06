@@ -16,6 +16,8 @@ export default function CyclePage() {
   const [showConfirm, setShowConfirm] = useState(false);
   const [selectedGirl, setSelectedGirl] = useState<string | null>(null);
   const [showHistory, setShowHistory] = useState(false);
+  const [showUndo, setShowUndo] = useState(false);
+const [previousPeriodDate, setPreviousPeriodDate] = useState<string | null>(null);
 
   // today as state, not computed inline to avoid Next.js hydration errors
   const [today, setToday] = useState<Date | null>(null);
@@ -93,20 +95,32 @@ export default function CyclePage() {
   };
 
   const handlePeriodStart = () => {
-    const todayStr = new Date().toISOString(); // save full date with time
+    const todayStr = new Date().toISOString();
     if (lastPeriodDate) {
       const newHistory = [...history, lastPeriodDate];
       setHistory(newHistory);
       localStorage.setItem('lateCircleHistory', JSON.stringify(newHistory));
+      setPreviousPeriodDate(lastPeriodDate); // save for undo
     }
     setLastPeriodDate(todayStr);
     localStorage.setItem('lateCircleLastPeriod', todayStr);
-
-    // Reset daily circles for new cycle
     localStorage.removeItem('lateCircleData');
     localStorage.removeItem('lateCircleDailyHistory');
+    
+    setShowUndo(true); // Show the undo option
+  };
 
-    router.push('/today'); // <-- Changed from '/'
+    const handleUndoReset = () => {
+    if (!previousPeriodDate) return;
+    // Restore previous date
+    setLastPeriodDate(previousPeriodDate);
+    localStorage.setItem('lateCircleLastPeriod', previousPeriodDate);
+    // Remove the last history entry (today's date)
+    const newHistory = history.slice(0, -1);
+    setHistory(newHistory);
+    localStorage.setItem('lateCircleHistory', JSON.stringify(newHistory));
+    setShowUndo(false);
+    setPreviousPeriodDate(null);
   };
 
   const cyclePercent = (currentDay / average) * 100;
@@ -244,20 +258,20 @@ export default function CyclePage() {
             <span className="text-[10px] text-[#4A2C35]/50 ml-6">{currentDay>12&&currentDay<=23 ? <span className="text-[#FF8FA3] font-bold">Glowing. You are here 💜</span> : "Glowing"}</span>
           </button>
 
-          <button onClick={() => setSelectedGirl('chop')} className={`flex flex-col text-left p-2 rounded-xl transition-all active:scale-[0.98] ${currentDay>23&&currentDay<=30?'bg-[#FFF0F3] shadow-sm':''}`}>
+          <button onClick={() => setSelectedGirl('chop')} className={`flex flex-col text-left p-2 rounded-xl transition-all active:scale-[0.98] ${girl.id === 'chop'?'bg-[#FFF0F3] shadow-sm':''}`}>
             <div className="flex justify-between items-center w-full">
-              <span className={`text-sm ${currentDay>23&&currentDay<=30 ? 'font-bold text-[#4A2C35]' : 'text-[#4A2C35]/80'}`}>🍚 Chop Girl</span>
-              <div className="flex items-center gap-2"><span className="text-[10px] text-[#4A2C35]/40">Day 24-30</span><span className="text-[#4A2C35]/30 text-lg leading-none">›</span></div>
+              <span className={`text-sm ${girl.id === 'chop' ? 'font-bold text-[#4A2C35]' : 'text-[#4A2C35]/80'}`}>🍚 Chop Girl</span>
+              <div className="flex items-center gap-2"><span className="text-[10px] text-[#4A2C35]/40">Day 24 to last 7 days</span><span className="text-[#4A2C35]/30 text-lg leading-none">›</span></div>
             </div>
-            <span className="text-[10px] text-[#4A2C35]/50 ml-6">{currentDay>23&&currentDay<=30 ? <span className="text-[#FF8FA3] font-bold">Hungry. You are here 💜</span> : "Hungry"}</span>
+            <span className="text-[10px] text-[#4A2C35]/50 ml-6">{girl.id === 'chop' ? <span className="text-[#FF8FA3] font-bold">Hungry. You are here 💜</span> : "Hungry"}</span>
           </button>
 
-          <button onClick={() => setSelectedGirl('ready')} className={`flex flex-col text-left p-2 rounded-xl transition-all active:scale-[0.98] ${currentDay>30?'bg-[#FFF0F3] shadow-sm':''}`}>
+          <button onClick={() => setSelectedGirl('ready')} className={`flex flex-col text-left p-2 rounded-xl transition-all active:scale-[0.98] ${girl.id === 'ready'?'bg-[#FFF0F3] shadow-sm':''}`}>
             <div className="flex justify-between items-center w-full">
-              <span className={`text-sm ${currentDay>30 ? 'font-bold text-[#4A2C35]' : 'text-[#4A2C35]/80'}`}>💜 Ready Girl</span>
-              <div className="flex items-center gap-2"><span className="text-[10px] text-[#4A2C35]/40">Day 31-{average}</span><span className="text-[#4A2C35]/30 text-lg leading-none">›</span></div>
+              <span className={`text-sm ${girl.id === 'ready' ? 'font-bold text-[#4A2C35]' : 'text-[#4A2C35]/80'}`}>💜 Ready Girl</span>
+              <div className="flex items-center gap-2"><span className="text-[10px] text-[#4A2C35]/40">Last 7 days</span><span className="text-[#4A2C35]/30 text-lg leading-none">›</span></div>
             </div>
-            <span className="text-[10px] text-[#4A2C35]/50 ml-6">{currentDay>30 ? <span className="text-[#FF8FA3] font-bold">Waiting. You are here 💜</span> : "Waiting"}</span>
+            <span className="text-[10px] text-[#4A2C35]/50 ml-6">{girl.id === 'ready' ? <span className="text-[#FF8FA3] font-bold">Waiting. You are here 💜</span> : "Waiting"}</span>
           </button>
         </div>
       </div>
@@ -283,27 +297,56 @@ export default function CyclePage() {
         </div>
       )}
 
+
+            {/* UNDO RESET MODAL */}
+      {showUndo && (
+        <div className="fixed inset-0 bg-[#4A2C35]/20 backdrop-blur-sm z-100 flex items-center justify-center p-6 animate-fade-in">
+          <div className="bg-white border border-[#4A2C35]/5 rounded-3xl p-6 w-full max-w-sm shadow-[0_24px_48px_-16px_rgba(74,44,53,0.25)] text-center">
+            <div className="w-16 h-16 rounded-full bg-[#9CAF88]/15 flex items-center justify-center mx-auto mb-4">
+              <span className="text-3xl">🌱</span>
+            </div>
+            <h3 className="text-xl font-bold text-[#4A2C35] mb-2">Cycle reset to Day 1.</h3>
+            <p className="text-sm text-[#4A2C35]/60 mb-6 leading-relaxed">
+              Your previous cycle has been saved to history. Was this a mistake?
+            </p>
+            <div className="flex flex-col gap-2">
+              <button onClick={() => setShowUndo(false)} className="w-full py-3 rounded-full bg-[#9CAF88] text-white font-bold active:scale-95 shadow-[0_8px_20px_-4px_rgba(156,175,136,0.3)]">
+                No, that's correct
+              </button>
+              <button onClick={handleUndoReset} className="w-full py-3 rounded-full border border-[#4A2C35]/15 text-[#4A2C35]/60 font-medium active:scale-95">
+                Undo — that was a mistake
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+
       {/* HISTORY MODAL */}
       {showHistory && (
-        <div className="fixed inset-0 bg-[#4A2C35]/20 backdrop-blur-sm z-100 flex items-end justify-center sm:items-center p-4 animate-fade-in" onClick={() => setShowHistory(false)}>
-          <div className="w-full max-w-sm bg-white rounded-3xl p-6 shadow-[0_24px_48px_-16px_rgba(74,44,53,0.25)] animate-slide-up" onClick={(e) => e.stopPropagation()}>
-            <div className="flex justify-between items-center mb-4">
+        <div className="fixed inset-0 bg-[#4A2C35]/20 backdrop-blur-sm z-100 flex items-center justify-center p-6 animate-fade-in" onClick={() => setShowHistory(false)}>
+          <div className="w-full max-w-sm bg-white rounded-3xl p-6 shadow-[0_24px_48px_-16px_rgba(74,44,53,0.25)] animate-slide-up max-h-[80vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+            <div className="flex justify-between items-center mb-4 shrink-0">
               <h2 className="text-lg font-bold text-[#4A2C35]">Recent Cycles</h2>
               <button onClick={() => setShowHistory(false)} className="w-8 h-8 rounded-full bg-[#FFF0F3] flex items-center justify-center text-[#4A2C35]/60 font-bold active:scale-95">✕</button>
             </div>
-            {history.length === 0 ? (
-              <p className="text-sm text-[#4A2C35]/40 text-center py-6">No history yet. Your first cycle is being tracked now.</p>
-            ) : (
-              <div className="flex flex-col gap-3 max-h-[50vh] overflow-y-auto pr-2">
-                {history.slice().reverse().map((date, index) => (
-                  <div key={index} className="flex justify-between items-center border-b border-[#4A2C35]/5 pb-3 last:border-0 last:pb-0">
-                    <span className="text-sm text-[#4A2C35]/80 font-medium">{new Date(date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
-                    <span className="text-[10px] bg-[#FFF0F3] text-[#FF8FA3] px-2 py-1 rounded-full font-bold">Logged</span>
-                  </div>
-                ))}
-              </div>
-            )}
-            <p className="text-[10px] text-[#4A2C35]/40 mt-6 text-center">Saved on your device. Show your doctor if you need clarity.</p>
+            
+            <div className="overflow-y-auto pr-2">
+              {history.length === 0 ? (
+                <p className="text-sm text-[#4A2C35]/40 text-center py-6">No history yet. Your first cycle is being tracked now.</p>
+              ) : (
+                <div className="flex flex-col gap-3">
+                  {history.slice().sort((a, b) => new Date(b).getTime() - new Date(a).getTime()).map((date, index) => (
+                    <div key={index} className="flex justify-between items-center border-b border-[#4A2C35]/5 pb-3 last:border-0 last:pb-0">
+                      <span className="text-sm text-[#4A2C35]/80 font-medium">{new Date(date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+                      <span className="text-[10px] bg-[#FFF0F3] text-[#FF8FA3] px-2 py-1 rounded-full font-bold">Logged</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            
+            <p className="text-[10px] text-[#4A2C35]/40 mt-6 text-center shrink-0">Saved on your device. Show your doctor if you need clarity.</p>
           </div>
         </div>
       )}

@@ -178,8 +178,7 @@ export default function Home() {
   };
 
   const handleWalk = () => {
-    setActiveModal(null);
-    setShowActionSheet(false);
+    // Removed setShowActionSheet(false) so the menu stays open
     setShowWinCelebration(true);
     setTimeout(() => {
       setShowWinCelebration(false);
@@ -274,7 +273,7 @@ export default function Home() {
     <main className="h-screen overflow-hidden bg-[#FFF0F3] text-[#4A2C35] flex flex-col items-center pt-8 px-6 font-sans relative animate-page-enter">
       
       {showWinCelebration && (
-        <div className="absolute inset-0 z-100 flex flex-col items-center justify-center bg-[#FFF0F3]/95 backdrop-blur-md animate-fade-in">
+        <div className="absolute inset-0 z-200 flex flex-col items-center justify-center bg-[#FFF0F3]/95 backdrop-blur-md animate-fade-in">
           <div className="w-32 h-32 rounded-full bg-[#9CAF88] flex items-center justify-center mb-6 animate-pop-in shadow-[0_0_60px_rgba(156,175,136,0.3)]">
             <span className="text-7xl text-white font-bold">✓</span>
           </div>
@@ -312,7 +311,7 @@ export default function Home() {
         
         {promiseDay && (
           <div className="mt-2 bg-[#FFF0F3] border border-[#4A2C35]/10 px-3 py-1 rounded-full shadow-sm">
-            <p className="text-[10px] font-bold text-[#4A2C35]/70">Day {promiseDay} of 7 💚</p>
+            <p className="text-[10px] font-bold text-[#4A2C35]/70">Day {promiseDay} of your 7-day promise 💚</p>
           </div>
         )}
       </div>
@@ -408,42 +407,75 @@ export default function Home() {
         </button>
       </div>
 
-      {/* ACTION SHEET */}
+      {/* ACTION SHEET (Smart Menu) */}
       {showActionSheet && (
-        <div className="fixed inset-0 bg-[#4A2C35]/20 backdrop-blur-sm z-100 flex items-end justify-center animate-fade-in" onClick={() => setShowActionSheet(false)}>
-          <div className="w-full max-w-sm bg-white rounded-t-3xl p-6 pb-24 shadow-[0_-20px_60px_-20px_rgba(74,44,53,0.15)] animate-slide-up" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-[#4A2C35]/20 backdrop-blur-sm z-100 flex items-center justify-center p-6 animate-fade-in" onClick={() => setShowActionSheet(false)}>
+          <div className="w-full max-w-sm bg-white rounded-3xl p-6 shadow-[0_24px_48px_-16px_rgba(74,44,53,0.25)] animate-slide-up" onClick={(e) => e.stopPropagation()}>
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-xl font-bold text-[#4A2C35]">What did you do?</h3>
               <button onClick={() => setShowActionSheet(false)} className="w-8 h-8 rounded-full bg-[#FFF0F3] flex items-center justify-center text-[#4A2C35]/60 font-bold">✕</button>
             </div>
             
             <div className="flex flex-col gap-3">
-              <button onClick={() => { setShowActionSheet(false); setActiveModal('food'); setShowFoodDetails(false); setShowFoodLog(false); }} className="flex items-center gap-4 bg-white border border-[#4A2C35]/5 p-4 rounded-2xl shadow-sm active:scale-95 transition-all">
-                <div className="w-12 h-12 rounded-xl bg-[#FFF0F3] flex items-center justify-center text-xl">🍲</div>
-                <div className="text-left">
-                  <h3 className="font-bold text-[#4A2C35]">Food</h3>
+              
+              {/* FOOD */}
+              <div className={`flex flex-col p-4 rounded-2xl border transition-all ${circles.food ? 'bg-[#9CAF88]/10 border-[#9CAF88]/30' : 'bg-white border-[#4A2C35]/5 shadow-sm'}`}>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-xl bg-[#FFF0F3] flex items-center justify-center text-xl">🍲</div>
+                    <div className="text-left">
+                      <h3 className="font-bold text-[#4A2C35]">Food</h3>
+                      <p className="text-[10px] text-[#4A2C35]/50">{circles.food ? 'Completed 💚' : 'Eat balanced, before 9pm'}</p>
+                    </div>
+                  </div>
+                  {!circles.food && (
+                    <button onClick={() => { setShowActionSheet(false); setActiveModal('food'); setShowFoodDetails(false); setShowFoodLog(false); }} className="text-[#4A2C35]/30 text-lg">➔</button>
+                  )}
                 </div>
-              </button>
-              <button onClick={() => { setShowActionSheet(false); setActiveModal('walk'); }} className="flex items-center gap-4 bg-white border border-[#4A2C35]/5 p-4 rounded-2xl shadow-sm active:scale-95 transition-all">
-                <div className="w-12 h-12 rounded-xl bg-[#E8F0E0] flex items-center justify-center text-xl">👟</div>
-                <div className="text-left">
-                  <h3 className="font-bold text-[#4A2C35]">Walk</h3>
+              </div>
+
+              {/* WALK */}
+              <div className={`flex flex-col p-4 rounded-2xl border transition-all ${isWalkDone ? 'bg-[#9CAF88]/10 border-[#9CAF88]/30' : 'bg-white border-[#4A2C35]/5 shadow-sm'}`}>
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-xl bg-[#E8F0E0] flex items-center justify-center text-xl">👟</div>
+                  <div className="text-left flex-1">
+                    <h3 className="font-bold text-[#4A2C35]">Walk</h3>
+                    <p className="text-[10px] text-[#4A2C35]/50">{isWalkDone ? 'Completed 💚' : 'Did you move 20 mins?'}</p>
+                  </div>
+                  {!isWalkDone && (
+                    <button onClick={handleWalk} className="bg-[#9CAF88] text-white px-4 py-2 rounded-xl text-xs font-bold active:scale-95">Yes</button>
+                  )}
                 </div>
-              </button>
-              <button onClick={() => { setShowActionSheet(false); setActiveModal('sleep'); }} className="flex items-center gap-4 bg-white border border-[#4A2C35]/5 p-4 rounded-2xl shadow-sm active:scale-95 transition-all">
-                <div className="w-12 h-12 rounded-xl bg-[#FFF0F3] flex items-center justify-center text-xl">🌙</div>
-                <div className="text-left flex-1">
-                  <h3 className="font-bold text-[#4A2C35]">Sleep</h3>
+              </div>
+
+              {/* SLEEP */}
+              <div className={`flex flex-col p-4 rounded-2xl border transition-all ${circles.sleep ? 'bg-[#9CAF88]/10 border-[#9CAF88]/30' : 'bg-white border-[#4A2C35]/5 shadow-sm'}`}>
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-xl bg-[#FFF0F3] flex items-center justify-center text-xl">🌙</div>
+                  <div className="text-left flex-1">
+                    <h3 className="font-bold text-[#4A2C35]">Sleep</h3>
+                    <p className="text-[10px] text-[#4A2C35]/50">{circles.sleep ? 'Completed 💚' : 'In bed by 10:30pm?'}</p>
+                  </div>
+                  {!circles.sleep && (
+                    <button onClick={() => { setShowWinCelebration(true); setTimeout(() => { setShowWinCelebration(false); saveState({ ...circles, sleep: true }); }, 2500); }} className="bg-[#9CAF88] text-white px-4 py-2 rounded-xl text-xs font-bold active:scale-95">Yes</button>
+                  )}
                 </div>
-                {girl.focus.includes('sleep') && <span className="text-[10px] bg-[#FF8FA3]/20 text-[#FF8FA3] px-2 py-1 rounded-full font-bold">Priority ✨</span>}
-              </button>
-              <button onClick={() => { setShowActionSheet(false); openCalmMenu(); }} className="flex items-center gap-4 bg-white border border-[#4A2C35]/5 p-4 rounded-2xl shadow-sm active:scale-95 transition-all">
-                <div className="w-12 h-12 rounded-xl bg-[#EDE8FF] flex items-center justify-center text-xl">🧠</div>
-                <div className="text-left flex-1">
-                  <h3 className="font-bold text-[#4A2C35]">Calm</h3>
+              </div>
+
+              {/* CALM */}
+              <div className={`flex flex-col p-4 rounded-2xl border transition-all ${circles.calm ? 'bg-[#9CAF88]/10 border-[#9CAF88]/30' : 'bg-white border-[#4A2C35]/5 shadow-sm'}`}>
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-xl bg-[#EDE8FF] flex items-center justify-center text-xl">🧠</div>
+                  <div className="text-left flex-1">
+                    <h3 className="font-bold text-[#4A2C35]">Calm</h3>
+                    <p className="text-[10px] text-[#4A2C35]/50">{circles.calm ? 'Completed 💚' : 'Did 90 secs of calm?'}</p>
+                  </div>
+                  {!circles.calm && (
+                    <button onClick={() => { setShowActionSheet(false); openCalmMenu(); }} className="bg-[#9CAF88] text-white px-3 py-2 rounded-xl text-[10px] font-bold active:scale-95">Start 90s →</button>
+                  )}
                 </div>
-                {girl.focus.includes('calm') && <span className="text-[10px] bg-[#FF8FA3]/20 text-[#FF8FA3] px-2 py-1 rounded-full font-bold">Priority ✨</span>}
-              </button>
+              </div>
+
             </div>
           </div>
         </div>
@@ -501,8 +533,8 @@ export default function Home() {
                     
                     <div className="flex gap-3 mt-auto">
                       <button onClick={() => setShowFoodDetails(true)} disabled={selectedFoods.length === 0} className={`flex-1 py-3 rounded-xl font-bold ${selectedFoods.length > 0 ? 'bg-[#9CAF88] text-white' : 'bg-[#9CAF88]/30 text-white/50'}`}>Next</button>
-                      <button onClick={() => setActiveModal(null)} className="px-6 border border-[#4A2C35]/15 py-3 rounded-xl font-medium opacity-70">Cancel</button>
-                    </div>
+                      <button onClick={() => { setActiveModal(null); setShowActionSheet(true); }} className="px-6 border border-[#4A2C35]/15 py-3 rounded-xl font-medium opacity-70">← Back</button>                   
+                   </div>
                   </>
                 ) : (
                   <>
