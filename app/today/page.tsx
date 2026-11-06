@@ -413,14 +413,20 @@ export default function Home() {
 
       <div className="w-full max-w-sm flex flex-col items-center mb-24 mt-auto shrink-0">
         <button 
-          onClick={() => { if (nowHour >= 19 && closedCount === 4) { setShowGoodnight(true); } else { setShowActionSheet(true); } }} 
+          onClick={() => { 
+            if (closedCount === 4) { 
+              setShowGoodnight(true); 
+            } else { 
+              setShowActionSheet(true); 
+            } 
+          }} 
           className={`w-full py-4 rounded-full text-[16px] font-bold transition-all ${
             closedCount === 4 
               ? 'bg-[#4A2C35] text-white shadow-[0_4px_20px_rgba(74,44,53,0.3)] animate-pulse active:scale-95' 
               : 'bg-[#9CAF88] text-white shadow-[0_4px_20px_rgba(156,175,136,0.3)] active:scale-95'
           }`}
         >
-          {closedCount === 4 && nowHour >= 19 ? "I'm done for today 💚" : getBigButtonText()}
+          {closedCount === 4 ? "I'm done for today 💚" : getBigButtonText()}
         </button>
       </div>
 

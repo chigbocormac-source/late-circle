@@ -7,6 +7,16 @@ import { PhaseId } from '../../utils/cycleEngine';
 import { logEvent } from '../../utils/analytics';
 import { generateShareCard, getCaption, blobToDataURL } from '../../utils/shareCard';
 
+function getLateMessage(lateDays: number): string {
+  if (lateDays <= 0) return "";
+  if (lateDays <= 3) return "Your body is not a clock. That is okay.";
+  if (lateDays <= 7) return "I know this can feel worrying. I am here.";
+  if (lateDays <= 14) return "You are not broken. Your cycle is longer than most.";
+  if (lateDays <= 30) return "This is a good time to check in with a doctor if you can.";
+  if (lateDays <= 89) return "Please see a doctor when you can. This is not your fault.";
+  return "Please see a doctor as soon as you can. Your history is ready.";
+}
+
 export default function CyclePage() {
   const router = useRouter();
   const [lastPeriodDate, setLastPeriodDate] = useState<string>('');
@@ -107,14 +117,14 @@ export default function CyclePage() {
       const newHistory = [...history, lastPeriodDate];
       setHistory(newHistory);
       localStorage.setItem('lateCircleHistory', JSON.stringify(newHistory));
-      setPreviousPeriodDate(lastPeriodDate); // save for undo
+      setPreviousPeriodDate(lastPeriodDate);
     }
     setLastPeriodDate(todayStr);
     localStorage.setItem('lateCircleLastPeriod', todayStr);
     localStorage.removeItem('lateCircleData');
     localStorage.removeItem('lateCircleDailyHistory');
     
-    setShowUndo(true); // Show the undo option
+    setShowUndo(true);
   };
 
   const handleUndoReset = () => {
@@ -128,7 +138,6 @@ export default function CyclePage() {
     setPreviousPeriodDate(null);
   };
 
-  // ---- SHARE HANDLER ----
   const handleShareGirl = async () => {
     if (!selectedGirl || shareBusy) return;
     const phase = selectedGirl as PhaseId;
@@ -148,20 +157,16 @@ export default function CyclePage() {
           }
         } catch (err) {
           const name = (err as Error)?.name;
-          // User cancelled -> don't fall back
           if (name === 'AbortError') {
             setShareBusy(false);
             return;
           }
-          // Any other error -> fall through to fallback
         }
       }
 
       if (shared) {
         logEvent('share_completed', { girl: phase, method: 'native' });
       } else {
-        // Fallback: try download + clipboard, but ALSO show inline preview
-        // (iOS WhatsApp webview blocks a.click() downloads, so preview is the reliable path)
         try {
           const url = URL.createObjectURL(blob);
           const a = document.createElement('a');
@@ -170,7 +175,6 @@ export default function CyclePage() {
           document.body.appendChild(a);
           a.click();
           document.body.removeChild(a);
-          // Revoke after a tick so the download starts
           setTimeout(() => URL.revokeObjectURL(url), 1000);
         } catch {}
 
@@ -178,7 +182,6 @@ export default function CyclePage() {
           await navigator.clipboard.writeText(caption);
         } catch {}
 
-        // Inline preview (long-press to save) — works in WhatsApp in-app browser
         const dataUrl = await blobToDataURL(blob);
         setSharePreview({ url: dataUrl, caption });
         logEvent('share_completed', { girl: phase, method: 'fallback' });
@@ -197,42 +200,41 @@ export default function CyclePage() {
 
   if (!isLoaded) return null;
 
-  // Data for the Explainer Modal
   const girlData: Record<string, any> = {
     rest: {
-      title: "🌙 Rest Girl", days: "Day 1-5",
-      why: "These days your body is resting from bleeding. It takes energy. That is why you feel tired.",
-      feel: "Cramps, tired, wants to sleep, low energy, wants hot water.",
+      title: "🌙 Rest Girl", days: "First 15% of your cycle",
+      why: "Your body is bleeding. It takes energy. That is why you feel tired.",
+      feel: "Cramps, low energy, wanting hot water.",
       want: "Soft rice, small Indomie, hot tea, sleep.",
-      circles: "To close Sleep: Sleep before 11pm. 7 hours is a win.\nTo close Calm: Do 90 seconds of calm. Breathe, no phone.\nTo close Food: Eat something small. Tea + small rice is enough.\nTo close Walk: Leave it open. No walking needed.\nTo win today = close Sleep + Calm."
+      circles: "Focus: Sleep + Calm.\nFood is okay if you eat small.\nLeave Walk open. You are resting."
     },
     fresh: {
-      title: "🌱 Fresh Girl", days: "Day 6-12",
-      why: "Bleeding has finished. Your energy is slowly coming back. That is why you feel better.",
-      feel: "Energy coming back, less tired, wants to talk.",
-      want: "Normal appetite, to go out a little, to do chores.",
-      circles: "To close Walk: Walk for 15 minutes outside.\nTo close Food: Eat one full meal with protein and vegetables.\nTo close Sleep: Sleep before 11pm.\nTo close Calm: Do 90 seconds of calm.\nBest time to build streak. Walk + Food are easiest now."
+      title: "🌱 Fresh Girl", days: "15% to 35% of your cycle",
+      why: "Bleeding has stopped. Your energy is coming back.",
+      feel: "Energy returning, less tired, wanting to talk.",
+      want: "Normal appetite, to go out small.",
+      circles: "Focus: Walk + Food.\nThis is your best time to build a streak."
     },
     fine: {
-      title: "✨ Fine Girl", days: "Day 13-23",
-      why: "You are in your shine days. You feel fine, glowing and confident. That is your pattern.",
-      feel: "Fine, glowing, high energy, wants pictures, wants to talk, confident. Work feels easy.",
-      want: "To go out, selfie, talk to people.",
-      circles: "To close Walk: Walk for 20 minutes. Use that high energy.\nTo close Food: Eat one full meal with protein and vegetables.\nTo close Sleep: Sleep before 11pm.\nTo close Calm: Do 90 seconds of calm.\nYou can win all 4 these days. If you do one, do Walk first."
+      title: "✨ Fine Girl", days: "35% to 60% of your cycle",
+      why: "This is your glow time. You feel confident.",
+      feel: "Fine, glowing, high energy.",
+      want: "To go out, take pictures, talk to people.",
+      circles: "Focus: All 4.\nYou have the energy to close all 4 today."
     },
     chop: {
-      title: "🍚 Chop Girl", days: "Day 24 to Last 7 days before period",
-      why: "Chop Girl loves to chop. These days your body wants extra energy. That is why you want to eat everything.",
-      feel: "Very hungry, wants 2 plates of rice, puff puff, shawarma, craves sweet, gets annoyed easily.",
-      want: "Indomie, ice cream, garri, eba, puff puff, biscuits by 10pm, to stay inside.",
-      circles: "To close Food: Add protein or vegetables to your rice plate. One plate like that closes Food.\nTo close Sleep: Sleep before 11pm. Set alarm.\nTo close Calm: Do 90 seconds of calm when you crave or feel like snapping.\nTo close Walk: Optional. 10 minutes if you can, but you can leave it open.\nHardest days. Win = Food + Sleep + Calm."
+      title: "🍚 Chop Girl", days: "60% to 80% of your cycle",
+      why: "Your body wants extra energy. That is why you want to eat everything.",
+      feel: "Very hungry, craving sweet and starchy food.",
+      want: "Indomie, garri, puff puff, shawarma.",
+      circles: "Focus: Food + Calm.\nAdd protein to your plate.\nWalk is optional."
     },
     ready: {
-      title: "💜 Ready Girl", days: "Last 7 days before next period",
-      why: "Your period is close. Your body is slowing down. That is why you feel tired, bloated and emotional.",
-      feel: "Tired again, moody, back pain, small bloat, wants to be alone.",
-      want: "To stay inside, sleep, ice cream, gifts, sweet names.",
-      circles: "To close Sleep: Sleep before 10:30pm.\nTo close Calm: Do 90 seconds of calm.\nTo close Food: Leave open if tired. If you eat, small food counts.\nTo close Walk: Leave open if tired.\nExtra: Put a pad in your bag from today.\nTo win today = close Sleep + Calm."
+      title: "💜 Ready Girl", days: "Last 20% of your cycle",
+      why: "Your period is close. Your body is slowing down.",
+      feel: "Tired, moody, bloated.",
+      want: "To stay inside, sleep, ice cream, sweet names.",
+      circles: "Focus: Sleep + Calm.\nLeave Food and Walk open if you are tired.\nKeep a pad in your bag."
     }
   };
 
@@ -242,28 +244,24 @@ export default function CyclePage() {
       <button onClick={() => router.push('/today')} className="absolute top-6 left-6 text-[#4A2C35]/50 text-sm font-medium active:opacity-50">← Today</button>
       <h1 className="text-2xl font-serif text-[#4A2C35] mb-3 tracking-[0.2em]">YOUR CYCLE</h1>
 
-      {/* Status Pill */}
+      {/* Status Pill — Soft, no panic */}
       <div className="flex flex-col items-center mb-4 w-full max-w-sm">
-        {lateDays > 0 ? (
-          <div className="bg-[#FFB3C1]/40 border border-[#FF8FA3]/30 px-4 py-1 rounded-full">
-            <p className="text-[#8A2C3E] text-xs font-bold">🚨 {lateDays} Days Late. {girl.emoji} {girl.name}</p>
-          </div>
-        ) : (
-          <div className="bg-[#9CAF88]/15 border border-[#9CAF88]/20 px-4 py-1 rounded-full">
-            <p className="text-[#5A7350] text-xs font-bold">{girl.emoji} Day {currentDay} • {girl.name}. Period close</p>
-          </div>
-        )}
+        <div className="bg-[#9CAF88]/15 border border-[#9CAF88]/20 px-4 py-1.5 rounded-full text-center">
+          <p className="text-[#5A7350] text-xs font-bold">
+            {girl.emoji} Day {currentDay} • {girl.name}
+          </p>
+        </div>
       </div>
 
-      {/* Compact Ring with Next Period inside */}
+      {/* Compact Ring */}
       <div className="relative mb-4 flex items-center justify-center" style={{ width: '200px', height: '200px' }}>
         <svg className="absolute inset-0 transform -rotate-90" width="200" height="200" viewBox="0 0 200 200">
           <circle cx="100" cy="100" r={ringRadius} fill="transparent" stroke="rgba(74, 44, 53, 0.08)" strokeWidth="10" />
-          <circle cx="100" cy="100" r={ringRadius} fill="transparent" stroke={lateDays > 0 ? "#FF8FA3" : girl.color} strokeWidth="10" strokeDasharray={circleCircumference} strokeDashoffset={strokeDashoffset} strokeLinecap="round" className="transition-all duration-1000 ease-out" />
+          <circle cx="100" cy="100" r={ringRadius} fill="transparent" stroke={girl.color} strokeWidth="10" strokeDasharray={circleCircumference} strokeDashoffset={strokeDashoffset} strokeLinecap="round" className="transition-all duration-1000 ease-out" />
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center z-10">
           <div className="flex items-baseline justify-center gap-1 leading-none">
-            <span className={`text-5xl font-bold tracking-tighter ${lateDays > 0 ? 'text-[#FF8FA3]' : 'text-[#4A2C35]'}`}>{currentDay}</span>
+            <span className="text-5xl font-bold tracking-tighter text-[#4A2C35]">{currentDay}</span>
             <span className="text-xl text-[#4A2C35]/30 font-medium">/ {average}</span>
           </div>
           <span className="text-[10px] text-[#4A2C35]/50 mt-1 font-bold tracking-widest uppercase">{girl.name}</span>
@@ -272,6 +270,21 @@ export default function CyclePage() {
           </span>
         </div>
       </div>
+
+      {/* Ovi's late message (only shows when she is late) */}
+      {lateDays > 0 && (
+        <div className="w-full max-w-sm bg-white border border-[#9CAF88]/30 p-4 rounded-2xl mb-6 shadow-[0_8px_24px_-8px_rgba(74,44,53,0.06)]">
+          <p className="text-[10px] font-bold text-[#9CAF88] uppercase tracking-widest mb-1">
+            Ovi noticed
+          </p>
+          <p className="text-sm text-[#4A2C35] leading-relaxed">
+            {getLateMessage(lateDays)}
+          </p>
+          <p className="text-[11px] text-[#4A2C35]/50 mt-2 leading-relaxed">
+            You are {lateDays} {lateDays === 1 ? 'day' : 'days'} past your usual {average}. Keep showing up. One circle today is enough.
+          </p>
+        </div>
+      )}
 
       {/* Horizontal Scrollable Tags */}
       <div className="w-full max-w-sm mb-6">
@@ -288,12 +301,12 @@ export default function CyclePage() {
         )}
       </div>
 
-      {/* Slimmer Action Button */}
+      {/* Period start button */}
       <button onClick={() => setShowConfirm(true)} className="w-full max-w-sm bg-[#4A2C35] text-white py-3 rounded-full text-sm font-bold shadow-[0_8px_20px_-4px_rgba(74,44,53,0.25)] active:scale-95 transition-transform mb-8">
         My period started today 🌸
       </button>
 
-      {/* Compact 5 Girls Card */}
+      {/* 5 Girls Card */}
       <div className="w-full max-w-sm bg-white border border-[#4A2C35]/5 rounded-3xl p-5 shadow-[0_16px_32px_-12px_rgba(74,44,53,0.1)] mb-4">
         <div className="mb-3">
           <h2 className="text-[10px] font-bold text-[#4A2C35]/40 uppercase tracking-widest">5 Girls in 1 Body</h2>
@@ -304,7 +317,7 @@ export default function CyclePage() {
           <button onClick={() => { setSelectedGirl('rest'); logEvent('girl_explainer_opened', { girl: 'rest' }); }} className={`flex flex-col text-left p-2 rounded-xl transition-all active:scale-[0.98] ${currentDay<=5?'bg-[#FFF0F3] shadow-sm':''}`}>
             <div className="flex justify-between items-center w-full">
               <span className={`text-sm ${currentDay<=5 ? 'font-bold text-[#4A2C35]' : 'text-[#4A2C35]/80'}`}>🌙 Rest Girl</span>
-              <div className="flex items-center gap-2"><span className="text-[10px] text-[#4A2C35]/40">Day 1-5</span><span className="text-[#4A2C35]/30 text-lg leading-none">›</span></div>
+              <div className="flex items-center gap-2"><span className="text-[10px] text-[#4A2C35]/40">First 15%</span><span className="text-[#4A2C35]/30 text-lg leading-none">›</span></div>
             </div>
             <span className="text-[10px] text-[#4A2C35]/50 ml-6">{currentDay<=5 ? <span className="text-[#FF8FA3] font-bold">Tired. You are here 💜</span> : "Tired"}</span>
           </button>
@@ -312,7 +325,7 @@ export default function CyclePage() {
           <button onClick={() => { setSelectedGirl('fresh'); logEvent('girl_explainer_opened', { girl: 'fresh' }); }} className={`flex flex-col text-left p-2 rounded-xl transition-all active:scale-[0.98] ${currentDay>5&&currentDay<=12?'bg-[#FFF0F3] shadow-sm':''}`}>
             <div className="flex justify-between items-center w-full">
               <span className={`text-sm ${currentDay>5&&currentDay<=12 ? 'font-bold text-[#4A2C35]' : 'text-[#4A2C35]/80'}`}>🌱 Fresh Girl</span>
-              <div className="flex items-center gap-2"><span className="text-[10px] text-[#4A2C35]/40">Day 6-12</span><span className="text-[#4A2C35]/30 text-lg leading-none">›</span></div>
+              <div className="flex items-center gap-2"><span className="text-[10px] text-[#4A2C35]/40">15% - 35%</span><span className="text-[#4A2C35]/30 text-lg leading-none">›</span></div>
             </div>
             <span className="text-[10px] text-[#4A2C35]/50 ml-6">{currentDay>5&&currentDay<=12 ? <span className="text-[#FF8FA3] font-bold">Energy back. You are here 💜</span> : "Energy back"}</span>
           </button>
@@ -320,7 +333,7 @@ export default function CyclePage() {
           <button onClick={() => { setSelectedGirl('fine'); logEvent('girl_explainer_opened', { girl: 'fine' }); }} className={`flex flex-col text-left p-2 rounded-xl transition-all active:scale-[0.98] ${currentDay>12&&currentDay<=23?'bg-[#FFF0F3] shadow-sm':''}`}>
             <div className="flex justify-between items-center w-full">
               <span className={`text-sm ${currentDay>12&&currentDay<=23 ? 'font-bold text-[#4A2C35]' : 'text-[#4A2C35]/80'}`}>✨ Fine Girl</span>
-              <div className="flex items-center gap-2"><span className="text-[10px] text-[#4A2C35]/40">Day 13-23</span><span className="text-[#4A2C35]/30 text-lg leading-none">›</span></div>
+              <div className="flex items-center gap-2"><span className="text-[10px] text-[#4A2C35]/40">35% - 60%</span><span className="text-[#4A2C35]/30 text-lg leading-none">›</span></div>
             </div>
             <span className="text-[10px] text-[#4A2C35]/50 ml-6">{currentDay>12&&currentDay<=23 ? <span className="text-[#FF8FA3] font-bold">Glowing. You are here 💜</span> : "Glowing"}</span>
           </button>
@@ -328,7 +341,7 @@ export default function CyclePage() {
           <button onClick={() => { setSelectedGirl('chop'); logEvent('girl_explainer_opened', { girl: 'chop' }); }} className={`flex flex-col text-left p-2 rounded-xl transition-all active:scale-[0.98] ${girl.id === 'chop'?'bg-[#FFF0F3] shadow-sm':''}`}>
             <div className="flex justify-between items-center w-full">
               <span className={`text-sm ${girl.id === 'chop' ? 'font-bold text-[#4A2C35]' : 'text-[#4A2C35]/80'}`}>🍚 Chop Girl</span>
-              <div className="flex items-center gap-2"><span className="text-[10px] text-[#4A2C35]/40">Day 24 to last 7 days</span><span className="text-[#4A2C35]/30 text-lg leading-none">›</span></div>
+              <div className="flex items-center gap-2"><span className="text-[10px] text-[#4A2C35]/40">60% - 80%</span><span className="text-[#4A2C35]/30 text-lg leading-none">›</span></div>
             </div>
             <span className="text-[10px] text-[#4A2C35]/50 ml-6">{girl.id === 'chop' ? <span className="text-[#FF8FA3] font-bold">Hungry. You are here 💜</span> : "Hungry"}</span>
           </button>
@@ -336,14 +349,14 @@ export default function CyclePage() {
           <button onClick={() => { setSelectedGirl('ready'); logEvent('girl_explainer_opened', { girl: 'ready' }); }} className={`flex flex-col text-left p-2 rounded-xl transition-all active:scale-[0.98] ${girl.id === 'ready'?'bg-[#FFF0F3] shadow-sm':''}`}>
             <div className="flex justify-between items-center w-full">
               <span className={`text-sm ${girl.id === 'ready' ? 'font-bold text-[#4A2C35]' : 'text-[#4A2C35]/80'}`}>💜 Ready Girl</span>
-              <div className="flex items-center gap-2"><span className="text-[10px] text-[#4A2C35]/40">Last 7 days</span><span className="text-[#4A2C35]/30 text-lg leading-none">›</span></div>
+              <div className="flex items-center gap-2"><span className="text-[10px] text-[#4A2C35]/40">Last 20%</span><span className="text-[#4A2C35]/30 text-lg leading-none">›</span></div>
             </div>
             <span className="text-[10px] text-[#4A2C35]/50 ml-6">{girl.id === 'ready' ? <span className="text-[#FF8FA3] font-bold">Waiting. You are here 💜</span> : "Waiting"}</span>
           </button>
         </div>
       </div>
 
-      {/* Compact History Button */}
+      {/* History Button */}
       <button onClick={() => setShowHistory(true)} className="w-full max-w-sm bg-white border border-[#4A2C35]/5 rounded-2xl p-4 flex justify-between items-center shadow-[0_8px_20px_-8px_rgba(74,44,53,0.08)] active:scale-[0.98] transition-transform">
         <span className="text-sm font-bold text-[#4A2C35]/80">View Recent Cycles ({history.length})</span>
         <span className="text-[#4A2C35]/30 text-lg">›</span>
@@ -416,7 +429,7 @@ export default function CyclePage() {
         </div>
       )}
 
-      {/* SHARE PREVIEW MODAL (iOS WhatsApp fallback) */}
+      {/* SHARE PREVIEW MODAL */}
       {sharePreview && (
         <div className="fixed inset-0 bg-[#4A2C35]/40 backdrop-blur-sm z-100 flex items-center justify-center p-4 animate-fade-in" onClick={() => setSharePreview(null)}>
           <div className="w-full max-w-sm bg-white rounded-3xl p-5 shadow-[0_24px_48px_-16px_rgba(74,44,53,0.25)] animate-slide-up" onClick={(e) => e.stopPropagation()}>
@@ -449,7 +462,7 @@ export default function CyclePage() {
         const data = girlData[selectedGirl];
         return (
           <div className="fixed inset-0 bg-[#4A2C35]/20 backdrop-blur-sm z-100 flex items-end justify-center sm:items-center p-4 animate-fade-in" onClick={() => setSelectedGirl(null)}>
-            <div className="w-full max-w-sm bg-white rounded-3xl p-6 shadow-[0_24px_48px_-16px_rgba(74,44,53,0.25)] animate-slide-up max-h-[85vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="w-full max-w-sm bg-white rounded-3xl p-6 pb-28 shadow-[0_24px_48px_-16px_rgba(74,44,53,0.25)] animate-slide-up max-h-[85vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
               <div className="flex justify-between items-center mb-2">
                 <h2 className="text-xl font-bold text-[#4A2C35]">{data.title}</h2>
                 <button onClick={() => setSelectedGirl(null)} className="w-8 h-8 rounded-full bg-[#FFF0F3] flex items-center justify-center text-[#4A2C35]/60 font-bold active:scale-95">✕</button>
