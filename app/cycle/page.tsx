@@ -3,6 +3,9 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { getCyclePhase } from '../../utils/cycleEngine';
+import { PhaseId } from '../../utils/cycleEngine';
+import { logEvent } from '../../utils/analytics';
+import { generateShareCard, getCaption, blobToDataURL } from '../../utils/shareCard';
 
 export default function CyclePage() {
   const router = useRouter();
@@ -17,7 +20,11 @@ export default function CyclePage() {
   const [selectedGirl, setSelectedGirl] = useState<string | null>(null);
   const [showHistory, setShowHistory] = useState(false);
   const [showUndo, setShowUndo] = useState(false);
-const [previousPeriodDate, setPreviousPeriodDate] = useState<string | null>(null);
+  const [previousPeriodDate, setPreviousPeriodDate] = useState<string | null>(null);
+
+  // Share preview fallback (iOS WhatsApp in-app browser)
+  const [sharePreview, setSharePreview] = useState<{ url: string; caption: string } | null>(null);
+  const [shareBusy, setShareBusy] = useState(false);
 
   // today as state, not computed inline to avoid Next.js hydration errors
   const [today, setToday] = useState<Date | null>(null);
@@ -110,17 +117,77 @@ const [previousPeriodDate, setPreviousPeriodDate] = useState<string | null>(null
     setShowUndo(true); // Show the undo option
   };
 
-    const handleUndoReset = () => {
+  const handleUndoReset = () => {
     if (!previousPeriodDate) return;
-    // Restore previous date
     setLastPeriodDate(previousPeriodDate);
     localStorage.setItem('lateCircleLastPeriod', previousPeriodDate);
-    // Remove the last history entry (today's date)
     const newHistory = history.slice(0, -1);
     setHistory(newHistory);
     localStorage.setItem('lateCircleHistory', JSON.stringify(newHistory));
     setShowUndo(false);
     setPreviousPeriodDate(null);
+  };
+
+  // ---- SHARE HANDLER ----
+  const handleShareGirl = async () => {
+    if (!selectedGirl || shareBusy) return;
+    const phase = selectedGirl as PhaseId;
+    setShareBusy(true);
+    try {
+      const blob = await generateShareCard(phase, currentDay);
+      const caption = getCaption(phase);
+      const file = new File([blob], 'late-circle.png', { type: 'image/png' });
+
+      let shared = false;
+
+      if (typeof navigator !== 'undefined' && navigator.share && navigator.canShare) {
+        try {
+          if (navigator.canShare({ files: [file] })) {
+            await navigator.share({ files: [file], text: caption });
+            shared = true;
+          }
+        } catch (err) {
+          const name = (err as Error)?.name;
+          // User cancelled -> don't fall back
+          if (name === 'AbortError') {
+            setShareBusy(false);
+            return;
+          }
+          // Any other error -> fall through to fallback
+        }
+      }
+
+      if (shared) {
+        logEvent('share_completed', { girl: phase, method: 'native' });
+      } else {
+        // Fallback: try download + clipboard, but ALSO show inline preview
+        // (iOS WhatsApp webview blocks a.click() downloads, so preview is the reliable path)
+        try {
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = 'late-circle.png';
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          // Revoke after a tick so the download starts
+          setTimeout(() => URL.revokeObjectURL(url), 1000);
+        } catch {}
+
+        try {
+          await navigator.clipboard.writeText(caption);
+        } catch {}
+
+        // Inline preview (long-press to save) — works in WhatsApp in-app browser
+        const dataUrl = await blobToDataURL(blob);
+        setSharePreview({ url: dataUrl, caption });
+        logEvent('share_completed', { girl: phase, method: 'fallback' });
+      }
+    } catch (err) {
+      console.error('share failed', err);
+    } finally {
+      setShareBusy(false);
+    }
   };
 
   const cyclePercent = (currentDay / average) * 100;
@@ -131,7 +198,7 @@ const [previousPeriodDate, setPreviousPeriodDate] = useState<string | null>(null
   if (!isLoaded) return null;
 
   // Data for the Explainer Modal
-    const girlData: Record<string, any> = {
+  const girlData: Record<string, any> = {
     rest: {
       title: "🌙 Rest Girl", days: "Day 1-5",
       why: "These days your body is resting from bleeding. It takes energy. That is why you feel tired.",
@@ -234,7 +301,7 @@ const [previousPeriodDate, setPreviousPeriodDate] = useState<string | null>(null
         </div>
         
         <div className="flex flex-col gap-1">
-          <button onClick={() => setSelectedGirl('rest')} className={`flex flex-col text-left p-2 rounded-xl transition-all active:scale-[0.98] ${currentDay<=5?'bg-[#FFF0F3] shadow-sm':''}`}>
+          <button onClick={() => { setSelectedGirl('rest'); logEvent('girl_explainer_opened', { girl: 'rest' }); }} className={`flex flex-col text-left p-2 rounded-xl transition-all active:scale-[0.98] ${currentDay<=5?'bg-[#FFF0F3] shadow-sm':''}`}>
             <div className="flex justify-between items-center w-full">
               <span className={`text-sm ${currentDay<=5 ? 'font-bold text-[#4A2C35]' : 'text-[#4A2C35]/80'}`}>🌙 Rest Girl</span>
               <div className="flex items-center gap-2"><span className="text-[10px] text-[#4A2C35]/40">Day 1-5</span><span className="text-[#4A2C35]/30 text-lg leading-none">›</span></div>
@@ -242,7 +309,7 @@ const [previousPeriodDate, setPreviousPeriodDate] = useState<string | null>(null
             <span className="text-[10px] text-[#4A2C35]/50 ml-6">{currentDay<=5 ? <span className="text-[#FF8FA3] font-bold">Tired. You are here 💜</span> : "Tired"}</span>
           </button>
 
-          <button onClick={() => setSelectedGirl('fresh')} className={`flex flex-col text-left p-2 rounded-xl transition-all active:scale-[0.98] ${currentDay>5&&currentDay<=12?'bg-[#FFF0F3] shadow-sm':''}`}>
+          <button onClick={() => { setSelectedGirl('fresh'); logEvent('girl_explainer_opened', { girl: 'fresh' }); }} className={`flex flex-col text-left p-2 rounded-xl transition-all active:scale-[0.98] ${currentDay>5&&currentDay<=12?'bg-[#FFF0F3] shadow-sm':''}`}>
             <div className="flex justify-between items-center w-full">
               <span className={`text-sm ${currentDay>5&&currentDay<=12 ? 'font-bold text-[#4A2C35]' : 'text-[#4A2C35]/80'}`}>🌱 Fresh Girl</span>
               <div className="flex items-center gap-2"><span className="text-[10px] text-[#4A2C35]/40">Day 6-12</span><span className="text-[#4A2C35]/30 text-lg leading-none">›</span></div>
@@ -250,7 +317,7 @@ const [previousPeriodDate, setPreviousPeriodDate] = useState<string | null>(null
             <span className="text-[10px] text-[#4A2C35]/50 ml-6">{currentDay>5&&currentDay<=12 ? <span className="text-[#FF8FA3] font-bold">Energy back. You are here 💜</span> : "Energy back"}</span>
           </button>
 
-          <button onClick={() => setSelectedGirl('fine')} className={`flex flex-col text-left p-2 rounded-xl transition-all active:scale-[0.98] ${currentDay>12&&currentDay<=23?'bg-[#FFF0F3] shadow-sm':''}`}>
+          <button onClick={() => { setSelectedGirl('fine'); logEvent('girl_explainer_opened', { girl: 'fine' }); }} className={`flex flex-col text-left p-2 rounded-xl transition-all active:scale-[0.98] ${currentDay>12&&currentDay<=23?'bg-[#FFF0F3] shadow-sm':''}`}>
             <div className="flex justify-between items-center w-full">
               <span className={`text-sm ${currentDay>12&&currentDay<=23 ? 'font-bold text-[#4A2C35]' : 'text-[#4A2C35]/80'}`}>✨ Fine Girl</span>
               <div className="flex items-center gap-2"><span className="text-[10px] text-[#4A2C35]/40">Day 13-23</span><span className="text-[#4A2C35]/30 text-lg leading-none">›</span></div>
@@ -258,7 +325,7 @@ const [previousPeriodDate, setPreviousPeriodDate] = useState<string | null>(null
             <span className="text-[10px] text-[#4A2C35]/50 ml-6">{currentDay>12&&currentDay<=23 ? <span className="text-[#FF8FA3] font-bold">Glowing. You are here 💜</span> : "Glowing"}</span>
           </button>
 
-          <button onClick={() => setSelectedGirl('chop')} className={`flex flex-col text-left p-2 rounded-xl transition-all active:scale-[0.98] ${girl.id === 'chop'?'bg-[#FFF0F3] shadow-sm':''}`}>
+          <button onClick={() => { setSelectedGirl('chop'); logEvent('girl_explainer_opened', { girl: 'chop' }); }} className={`flex flex-col text-left p-2 rounded-xl transition-all active:scale-[0.98] ${girl.id === 'chop'?'bg-[#FFF0F3] shadow-sm':''}`}>
             <div className="flex justify-between items-center w-full">
               <span className={`text-sm ${girl.id === 'chop' ? 'font-bold text-[#4A2C35]' : 'text-[#4A2C35]/80'}`}>🍚 Chop Girl</span>
               <div className="flex items-center gap-2"><span className="text-[10px] text-[#4A2C35]/40">Day 24 to last 7 days</span><span className="text-[#4A2C35]/30 text-lg leading-none">›</span></div>
@@ -266,7 +333,7 @@ const [previousPeriodDate, setPreviousPeriodDate] = useState<string | null>(null
             <span className="text-[10px] text-[#4A2C35]/50 ml-6">{girl.id === 'chop' ? <span className="text-[#FF8FA3] font-bold">Hungry. You are here 💜</span> : "Hungry"}</span>
           </button>
 
-          <button onClick={() => setSelectedGirl('ready')} className={`flex flex-col text-left p-2 rounded-xl transition-all active:scale-[0.98] ${girl.id === 'ready'?'bg-[#FFF0F3] shadow-sm':''}`}>
+          <button onClick={() => { setSelectedGirl('ready'); logEvent('girl_explainer_opened', { girl: 'ready' }); }} className={`flex flex-col text-left p-2 rounded-xl transition-all active:scale-[0.98] ${girl.id === 'ready'?'bg-[#FFF0F3] shadow-sm':''}`}>
             <div className="flex justify-between items-center w-full">
               <span className={`text-sm ${girl.id === 'ready' ? 'font-bold text-[#4A2C35]' : 'text-[#4A2C35]/80'}`}>💜 Ready Girl</span>
               <div className="flex items-center gap-2"><span className="text-[10px] text-[#4A2C35]/40">Last 7 days</span><span className="text-[#4A2C35]/30 text-lg leading-none">›</span></div>
@@ -297,8 +364,7 @@ const [previousPeriodDate, setPreviousPeriodDate] = useState<string | null>(null
         </div>
       )}
 
-
-            {/* UNDO RESET MODAL */}
+      {/* UNDO RESET MODAL */}
       {showUndo && (
         <div className="fixed inset-0 bg-[#4A2C35]/20 backdrop-blur-sm z-100 flex items-center justify-center p-6 animate-fade-in">
           <div className="bg-white border border-[#4A2C35]/5 rounded-3xl p-6 w-full max-w-sm shadow-[0_24px_48px_-16px_rgba(74,44,53,0.25)] text-center">
@@ -320,7 +386,6 @@ const [previousPeriodDate, setPreviousPeriodDate] = useState<string | null>(null
           </div>
         </div>
       )}
-
 
       {/* HISTORY MODAL */}
       {showHistory && (
@@ -347,6 +412,34 @@ const [previousPeriodDate, setPreviousPeriodDate] = useState<string | null>(null
             </div>
             
             <p className="text-[10px] text-[#4A2C35]/40 mt-6 text-center shrink-0">Saved on your device. Show your doctor if you need clarity.</p>
+          </div>
+        </div>
+      )}
+
+      {/* SHARE PREVIEW MODAL (iOS WhatsApp fallback) */}
+      {sharePreview && (
+        <div className="fixed inset-0 bg-[#4A2C35]/40 backdrop-blur-sm z-100 flex items-center justify-center p-4 animate-fade-in" onClick={() => setSharePreview(null)}>
+          <div className="w-full max-w-sm bg-white rounded-3xl p-5 shadow-[0_24px_48px_-16px_rgba(74,44,53,0.25)] animate-slide-up" onClick={(e) => e.stopPropagation()}>
+            <div className="flex justify-between items-center mb-3">
+              <h3 className="text-lg font-bold text-[#4A2C35]">Your share card</h3>
+              <button onClick={() => setSharePreview(null)} className="w-8 h-8 rounded-full bg-[#FFF0F3] flex items-center justify-center text-[#4A2C35]/60 font-bold active:scale-95">✕</button>
+            </div>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={sharePreview.url}
+              alt="Your share card"
+              className="w-full rounded-2xl border border-[#4A2C35]/10 mb-3 select-none"
+              draggable={false}
+            />
+            <p className="text-[11px] text-[#4A2C35]/60 text-center mb-3 leading-relaxed">
+              Long-press the image above to save it. The caption is already copied to your clipboard.
+            </p>
+            <button
+              onClick={() => setSharePreview(null)}
+              className="w-full bg-[#4A2C35] text-white py-3 rounded-full font-bold active:scale-95 shadow-[0_8px_20px_-4px_rgba(74,44,53,0.2)]"
+            >
+              Done
+            </button>
           </div>
         </div>
       )}
@@ -384,6 +477,13 @@ const [previousPeriodDate, setPreviousPeriodDate] = useState<string | null>(null
 
               <p className="text-[10px] text-[#4A2C35]/40 text-center mb-4 leading-relaxed">35 days is not 1 mood. It's 5 girls. This is your pattern, not everybody's. Not medical. Just your pattern.</p>
 
+              <button
+                onClick={handleShareGirl}
+                disabled={shareBusy}
+                className="w-full bg-[#9CAF88] text-white py-3 rounded-full font-bold active:scale-95 shadow-[0_8px_20px_-4px_rgba(156,175,136,0.3)] mb-2 disabled:opacity-60"
+              >
+                {shareBusy ? 'Preparing…' : 'Share this Girl →'}
+              </button>
               <button onClick={() => setSelectedGirl(null)} className="w-full bg-[#4A2C35] text-white py-3 rounded-full font-bold active:scale-95 shadow-[0_8px_20px_-4px_rgba(74,44,53,0.2)]">Got it, Ovi</button>
             </div>
           </div>

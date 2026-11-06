@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '../supabase';
 import { getCyclePhase, oviGists, PhaseId, oviWelcome } from '../../utils/cycleEngine';
 import InstallHint from '../components/InstallHint';
+import { trackAppOpened, logEvent } from '../../utils/analytics';
 
 function getCycleData(lastPeriodDateString: string | null, cycleLengths: number[] = []) {
   if (!lastPeriodDateString) return { currentDay: 1, average: 35, lateDays: 0 };
@@ -119,6 +120,9 @@ export default function Home() {
     }
     fetchFoods();
     
+    // TELEMETRY: log app open (deduped inside trackAppOpened for StrictMode)
+    trackAppOpened(cycleDataForPhase.currentDay);
+    
     setIsLoaded(true);
   }, [router]);
 
@@ -139,6 +143,9 @@ export default function Home() {
           c.calm = true;
           localStorage.setItem('lateCircleData', JSON.stringify(c));
         }
+        // TELEMETRY: calm closed via breathing timer
+        const cd = getCycleData(localStorage.getItem('lateCircleLastPeriod'), [32, 35, 38]);
+        logEvent('circle_closed', { circle: 'calm', day: cd.currentDay, method: 'breathing' });
       }, 2500);
     }
     return () => clearTimeout(timer);
@@ -175,6 +182,8 @@ export default function Home() {
     setShowFoodDetails(false);
     setCalmView(null);
     setShowActionSheet(false);
+    // TELEMETRY
+    logEvent('circle_closed', { circle, day: cycleData.currentDay });
   };
 
   const handleWalk = () => {
@@ -183,6 +192,8 @@ export default function Home() {
     setTimeout(() => {
       setShowWinCelebration(false);
       saveState({ ...circles, walk: true });
+      // TELEMETRY
+      logEvent('circle_closed', { circle: 'walk', day: cycleData.currentDay });
     }, 2500);
   };
 
@@ -206,6 +217,12 @@ export default function Home() {
       setSelectedFoods(selectedFoods.filter(f => f.id !== food.id));
     } else {
       setSelectedFoods([...selectedFoods, food]);
+      // TELEMETRY: log on selection only (not per keystroke)
+      logEvent('food_search_used', {
+        query: searchQuery.trim() || null,
+        food: food.name,
+        score: food.score,
+      });
     }
   };
 
@@ -457,7 +474,7 @@ export default function Home() {
                     <p className="text-[10px] text-[#4A2C35]/50">{circles.sleep ? 'Completed 💚' : 'In bed by 10:30pm?'}</p>
                   </div>
                   {!circles.sleep && (
-                    <button onClick={() => { setShowWinCelebration(true); setTimeout(() => { setShowWinCelebration(false); saveState({ ...circles, sleep: true }); }, 2500); }} className="bg-[#9CAF88] text-white px-4 py-2 rounded-xl text-xs font-bold active:scale-95">Yes</button>
+                    <button onClick={() => { setShowWinCelebration(true); setTimeout(() => { setShowWinCelebration(false); saveState({ ...circles, sleep: true }); logEvent('circle_closed', { circle: 'sleep', day: cycleData.currentDay }); }, 2500); }} className="bg-[#9CAF88] text-white px-4 py-2 rounded-xl text-xs font-bold active:scale-95">Yes</button>
                   )}
                 </div>
               </div>
