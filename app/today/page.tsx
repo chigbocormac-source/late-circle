@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../supabase';
-import { getCyclePhase, oviGists, PhaseId, oviWelcome } from '../../utils/cycleEngine';
+import { getCyclePhase, oviGists, PhaseId, oviWelcome, getMorningGreeting } from '../../utils/cycleEngine';
 import InstallHint from '../components/InstallHint';
 import { trackAppOpened, logEvent } from '../../utils/analytics';
 
@@ -66,6 +66,7 @@ export default function Home() {
   
   const [promiseDay, setPromiseDay] = useState<number | null>(null);
   const [nowHour, setNowHour] = useState(0);
+  const [morningGreeting, setMorningGreeting] = useState<string>('');
 
   useEffect(() => {
     const onboarded = localStorage.getItem('lateCircleOnboarded');
@@ -99,7 +100,15 @@ export default function Home() {
       commit.setHours(0,0,0,0);
       today.setHours(0,0,0,0);
       const daysSince = Math.floor((today.getTime() - commit.getTime()) / (1000 * 60 * 60 * 24)) + 1;
-      if (daysSince <= 7) setPromiseDay(daysSince);
+      
+      if (daysSince >= 1 && daysSince <= 7) {
+        setPromiseDay(daysSince);
+      } else if (daysSince > 7) {
+        // 7 days are over. Clean up.
+        setPromiseDay(null);
+        localStorage.removeItem('lateCirclePromised7Days');
+        localStorage.removeItem('lateCircleCommitDate');
+      }
     }
 
     const savedPhase = localStorage.getItem('lateCircleLastPhase');
@@ -122,7 +131,16 @@ export default function Home() {
     
     // TELEMETRY: log app open (deduped inside trackAppOpened for StrictMode)
     trackAppOpened(cycleDataForPhase.currentDay);
+        // Get yesterday's count for the greeting
+    const dailyHistory = JSON.parse(localStorage.getItem('lateCircleDailyHistory') || '{}');
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = yesterday.toISOString().split('T')[0];
+    const yesterdayData = dailyHistory[yesterdayStr];
+    const yesterdayCount = yesterdayData ? yesterdayData.count : null;
     
+    const greeting = getMorningGreeting(currentPhaseData.id, yesterdayCount);
+    setMorningGreeting(greeting); 
     setIsLoaded(true);
   }, [router]);
 
@@ -322,7 +340,7 @@ export default function Home() {
         </div>
       )}
 
-      <div className="flex flex-col items-center w-full relative mb-2 px-8 text-center mt-2 shrink-0">
+            <div className="flex flex-col items-center w-full relative mb-2 px-8 text-center mt-2 shrink-0">
         <h1 className="text-2xl font-serif text-[#4A2C35] mb-1 tracking-[0.2em]">YOUR CIRCLE</h1>
         <p className="text-[#4A2C35]/50 text-xs font-medium">Today • {todayStr}</p>
         
@@ -330,6 +348,12 @@ export default function Home() {
           <div className="mt-2 bg-[#FFF0F3] border border-[#4A2C35]/10 px-3 py-1 rounded-full shadow-sm">
             <p className="text-[10px] font-bold text-[#4A2C35]/70">Day {promiseDay} of your 7-day promise 💚</p>
           </div>
+        )}
+
+        {morningGreeting && (
+          <p className="mt-3 text-[13px] text-[#4A2C35]/70 leading-relaxed px-4 max-w-xs">
+            {morningGreeting}
+          </p>
         )}
       </div>
 

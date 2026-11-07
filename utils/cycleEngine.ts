@@ -58,3 +58,40 @@ export const oviGists: Record<PhaseId, Record<string, string>> = {
     calm: "Want ice cream or petting today? It's hormones. Do 90 secs calm. Tell your person you need a soft hug."
   }
 };
+export function getMorningGreeting(
+  girl: PhaseId,
+  yesterdayCount: number | null
+): string {
+  // Day 1: no memory yet
+  if (yesterdayCount === null) {
+    const welcomes: Record<PhaseId, string> = {
+      rest: "Rest Girl is here. Rest today. Sleep and Calm.",
+      fresh: "Fresh Girl is here. Start with Walk and Food today.",
+      fine: "Fine Girl is here. Try for all 4 today if you can.",
+      chop: "Chop Girl is here. Eat a balanced plate. Then do your calm.",
+      ready: "Ready Girl is here. Slow down today. Sleep early.",
+    };
+    return welcomes[girl];
+  }
+
+  // Binary memory: 2+ = "You showed up", 0-1 = "Yesterday is gone"
+  if (yesterdayCount >= 2) {
+    const showedUp: Record<PhaseId, string> = {
+      rest: "You closed 2 yesterday even while bleeding. That is strong. Rest again today.",
+      fresh: "You showed up yesterday. Let's do it again today. Walk and Food.",
+      fine: "You showed up yesterday. Your glow is working. Let's go again today.",
+      chop: "You ate well yesterday. That is discipline. Let's do it again today.",
+      ready: "You slept early yesterday. Your body thanked you. Slow down again today.",
+    };
+    return showedUp[girl];
+  } else {
+    const tryAgain: Record<PhaseId, string> = {
+      rest: "Yesterday is gone. Today is new. Rest today. Sleep and Calm.",
+      fresh: "Yesterday is gone. Today is new. Start fresh today. Walk and Food.",
+      fine: "Yesterday is gone. Today is new. Your glow is still here. Let's start today.",
+      chop: "Yesterday is gone. Today is new. Eat well today. Food and Calm.",
+      ready: "Yesterday is gone. Today is new. Slow down today. Sleep and Calm.",
+    };
+    return tryAgain[girl];
+  }
+}
