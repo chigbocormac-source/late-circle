@@ -2,10 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { getCyclePhase } from '../../utils/cycleEngine';
-import { PhaseId } from '../../utils/cycleEngine';
+import { getCyclePhase, PhaseId } from '../../utils/cycleEngine';
 import { logEvent } from '../../utils/analytics';
 import { generateShareCard, getCaption, blobToDataURL } from '../../utils/shareCard';
+import OviLetter from './OviLetter';
+import { buildLetterData } from '../../utils/oviLetter';
 
 function getLateMessage(lateDays: number): string {
   if (lateDays <= 0) return "";
@@ -31,12 +32,13 @@ export default function CyclePage() {
   const [showHistory, setShowHistory] = useState(false);
   const [showUndo, setShowUndo] = useState(false);
   const [previousPeriodDate, setPreviousPeriodDate] = useState<string | null>(null);
+  const [showLetter, setShowLetter] = useState(false);
+  const [letterData, setLetterData] = useState<any>(null);
 
-  // Share preview fallback (iOS WhatsApp in-app browser)
+  // Share preview fallback
   const [sharePreview, setSharePreview] = useState<{ url: string; caption: string } | null>(null);
   const [shareBusy, setShareBusy] = useState(false);
 
-  // today as state, not computed inline to avoid Next.js hydration errors
   const [today, setToday] = useState<Date | null>(null);
 
   useEffect(() => {
@@ -136,6 +138,21 @@ export default function CyclePage() {
     localStorage.setItem('lateCircleHistory', JSON.stringify(newHistory));
     setShowUndo(false);
     setPreviousPeriodDate(null);
+  };
+
+  const handleOpenLetter = () => {
+    const dailyHistory = JSON.parse(localStorage.getItem('lateCircleDailyHistory') || '{}');
+    const symptoms = JSON.parse(localStorage.getItem('lateCircleSymptoms') || '[]');
+    const letter = buildLetterData(
+      girl.id,
+      lastPeriodDate,
+      currentDay,
+      average,
+      dailyHistory,
+      symptoms
+    );
+    setLetterData(letter);
+    setShowLetter(true);
   };
 
   const handleShareGirl = async () => {
@@ -271,7 +288,7 @@ export default function CyclePage() {
         </div>
       </div>
 
-      {/* Ovi's late message (only shows when she is late) */}
+      {/* Ovi's late message */}
       {lateDays > 0 && (
         <div className="w-full max-w-sm bg-white border border-[#9CAF88]/30 p-4 rounded-2xl mb-6 shadow-[0_8px_24px_-8px_rgba(74,44,53,0.06)]">
           <p className="text-[10px] font-bold text-[#9CAF88] uppercase tracking-widest mb-1">
@@ -356,6 +373,22 @@ export default function CyclePage() {
         </div>
       </div>
 
+      {/* WAITING CARD — Only appears when lateDays >= 3 */}
+      {lateDays >= 3 && (
+        <div className="w-full max-w-sm bg-[#9CAF88]/10 border border-[#9CAF88]/30 rounded-3xl p-5 shadow-[0_16px_32px_-12px_rgba(74,44,53,0.1)] mb-4">
+          <h2 className="text-sm font-bold text-[#4A2C35] mb-2">Ovi noticed you are still waiting.</h2>
+          <p className="text-xs text-[#4A2C35]/70 mb-4 leading-relaxed">
+            Feeling worried? Let me write you a letter. Just for you. Only yours.
+          </p>
+          <button
+            onClick={handleOpenLetter}
+            className="w-full bg-[#4A2C35] text-white py-3 rounded-full font-bold active:scale-95 shadow-[0_8px_20px_-4px_rgba(74,44,53,0.2)] text-sm"
+          >
+            Write my Letter →
+          </button>
+        </div>
+      )}
+
       {/* History Button */}
       <button onClick={() => setShowHistory(true)} className="w-full max-w-sm bg-white border border-[#4A2C35]/5 rounded-2xl p-4 flex justify-between items-center shadow-[0_8px_20px_-8px_rgba(74,44,53,0.08)] active:scale-[0.98] transition-transform">
         <span className="text-sm font-bold text-[#4A2C35]/80">View Recent Cycles ({history.length})</span>
@@ -379,7 +412,7 @@ export default function CyclePage() {
 
       {/* UNDO RESET MODAL */}
       {showUndo && (
-        <div className="fixed inset-0 bg-[#4A2C35]/20 backdrop-blur-sm z-100 flex items-center justify-center p-6 animate-fade-in">
+        <div className="fixed inset-0 bg-[#4A2C35]/20 backdrop-blur-sm z-100lex items-center justify-center p-6 animate-fade-in">
           <div className="bg-white border border-[#4A2C35]/5 rounded-3xl p-6 w-full max-w-sm shadow-[0_24px_48px_-16px_rgba(74,44,53,0.25)] text-center">
             <div className="w-16 h-16 rounded-full bg-[#9CAF88]/15 flex items-center justify-center mx-auto mb-4">
               <span className="text-3xl">🌱</span>
@@ -502,6 +535,16 @@ export default function CyclePage() {
           </div>
         );
       })()}
+
+      {/* OVI LETTER MODAL */}
+      {showLetter && letterData && (
+        <OviLetter
+          data={letterData}
+          dailyHistory={JSON.parse(localStorage.getItem('lateCircleDailyHistory') || '{}')}
+          onClose={() => setShowLetter(false)}
+        />
+      )}
+
     </main>
   );
 }
