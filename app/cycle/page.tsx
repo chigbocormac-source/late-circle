@@ -303,6 +303,22 @@ export default function CyclePage() {
         </div>
       )}
 
+            {/* WAITING CARD — Only appears when lateDays >= 3 */}
+      {lateDays >= 3 && (
+        <div className="w-full max-w-sm bg-white border border-[#4A2C35]/5 rounded-3xl p-5 shadow-[0_16px_32px_-12px_rgba(74,44,53,0.1)] mb-4 mt-2">
+          <h2 className="text-sm font-bold text-[#4A2C35] mb-2">A letter from Ovi, for you.</h2>
+          <p className="text-xs text-[#4A2C35]/70 mb-4 leading-relaxed">
+            Feeling worried? Let me write you a letter. Just for you. Only yours.
+          </p>
+          <button
+            onClick={handleOpenLetter}
+            className="w-full bg-[#4A2C35] text-white py-3 rounded-full font-bold active:scale-95 shadow-[0_8px_20px_-4px_rgba(74,44,53,0.2)] text-sm"
+          >
+            Write my Letter →
+          </button>
+        </div>
+      )}
+
       {/* Horizontal Scrollable Tags */}
       <div className="w-full max-w-sm mb-6">
         <h2 className="text-[10px] font-bold text-[#4A2C35]/40 uppercase tracking-widest mb-2 text-center">How are you feeling today?</h2>
@@ -318,10 +334,13 @@ export default function CyclePage() {
         )}
       </div>
 
+
       {/* Period start button */}
       <button onClick={() => setShowConfirm(true)} className="w-full max-w-sm bg-[#4A2C35] text-white py-3 rounded-full text-sm font-bold shadow-[0_8px_20px_-4px_rgba(74,44,53,0.25)] active:scale-95 transition-transform mb-8">
         My period started today 🌸
       </button>
+
+      
 
       {/* 5 Girls Card */}
       <div className="w-full max-w-sm bg-white border border-[#4A2C35]/5 rounded-3xl p-5 shadow-[0_16px_32px_-12px_rgba(74,44,53,0.1)] mb-4">
@@ -373,21 +392,6 @@ export default function CyclePage() {
         </div>
       </div>
 
-      {/* WAITING CARD — Only appears when lateDays >= 3 */}
-      {lateDays >= 3 && (
-        <div className="w-full max-w-sm bg-[#9CAF88]/10 border border-[#9CAF88]/30 rounded-3xl p-5 shadow-[0_16px_32px_-12px_rgba(74,44,53,0.1)] mb-4">
-          <h2 className="text-sm font-bold text-[#4A2C35] mb-2">Ovi noticed you are still waiting.</h2>
-          <p className="text-xs text-[#4A2C35]/70 mb-4 leading-relaxed">
-            Feeling worried? Let me write you a letter. Just for you. Only yours.
-          </p>
-          <button
-            onClick={handleOpenLetter}
-            className="w-full bg-[#4A2C35] text-white py-3 rounded-full font-bold active:scale-95 shadow-[0_8px_20px_-4px_rgba(74,44,53,0.2)] text-sm"
-          >
-            Write my Letter →
-          </button>
-        </div>
-      )}
 
       {/* History Button */}
       <button onClick={() => setShowHistory(true)} className="w-full max-w-sm bg-white border border-[#4A2C35]/5 rounded-2xl p-4 flex justify-between items-center shadow-[0_8px_20px_-8px_rgba(74,44,53,0.08)] active:scale-[0.98] transition-transform">

@@ -23,10 +23,26 @@ export default function OviLetter({ data, dailyHistory, onClose }: OviLetterProp
     }
   };
 
+  const renderStars = (count: number, emoji: string) => {
+    if (count === 0) {
+      return <span className="text-[10px] text-white/40 italic">Not yet</span>;
+    }
+    return (
+      <div className="flex flex-wrap gap-1">
+        {Array.from({ length: count }).map((_, i) => (
+          <span key={i} className="text-lg" style={{ filter: 'drop-shadow(0 0 4px rgba(255,255,255,0.4))' }}>
+            {emoji}
+          </span>
+        ))}
+      </div>
+    );
+  };
+
   return (
-    <div className="fixed inset-0 bg-[#FFF0F3] z-100 flex flex-col pt-12 px-6 overflow-y-auto">
+    <div className="fixed inset-0 bg-[#FFF0F3] z-100 flex flex-col pt-12 px-6 overflow-y-auto overscroll-contain">
+      
       {/* Header */}
-      <div className="flex justify-between items-center mb-4">
+      <div className="flex justify-between items-center mb-4 shrink-0">
         <h1 className="text-lg font-bold text-[#4A2C35]">
           {page === 'letter' && 'Your Letter'}
           {page === 'stars' && 'Look At You'}
@@ -69,79 +85,28 @@ export default function OviLetter({ data, dailyHistory, onClose }: OviLetterProp
           <div className="bg-linear-to-b from-[#2D1B3D] to-[#5B3A5B] rounded-3xl p-6 shadow-[0_24px_48px_-16px_rgba(74,44,53,0.3)] mb-6 min-h-105 flex flex-col">
             <h2 className="text-lg font-bold text-white text-center mb-4">Look At You</h2>
 
-            {/* Stars grid */}
             <div className="flex-1 flex flex-col gap-3 justify-center">
-              {/* Food */}
               <div className="flex items-center gap-3">
                 <span className="text-[10px] text-white/60 w-12">Food</span>
-                <div className="flex flex-wrap gap-1">
-                  {Array.from({ length: stars.food.attempts }).map((_, i) => (
-                    <span
-                      key={i}
-                      className={`text-lg ${i < stars.food.successes ? 'opacity-100' : 'opacity-40'}`}
-                      style={{ filter: 'drop-shadow(0 0 4px rgba(255,165,0,0.5))' }}
-                    >
-                      🧡
-                    </span>
-                  ))}
-                </div>
+                {renderStars(stars.food.successes, '🧡')}
               </div>
-
-              {/* Walk */}
               <div className="flex items-center gap-3">
                 <span className="text-[10px] text-white/60 w-12">Walk</span>
-                <div className="flex flex-wrap gap-1">
-                  {Array.from({ length: stars.walk.attempts }).map((_, i) => (
-                    <span
-                      key={i}
-                      className={`text-lg ${i < stars.walk.successes ? 'opacity-100' : 'opacity-40'}`}
-                      style={{ filter: 'drop-shadow(0 0 4px rgba(0,200,100,0.5))' }}
-                    >
-                      💚
-                    </span>
-                  ))}
-                </div>
+                {renderStars(stars.walk.successes, '💚')}
               </div>
-
-              {/* Sleep */}
               <div className="flex items-center gap-3">
                 <span className="text-[10px] text-white/60 w-12">Sleep</span>
-                <div className="flex flex-wrap gap-1">
-                  {Array.from({ length: stars.sleep.attempts }).map((_, i) => (
-                    <span
-                      key={i}
-                      className={`text-lg ${i < stars.sleep.successes ? 'opacity-100' : 'opacity-40'}`}
-                      style={{ filter: 'drop-shadow(0 0 4px rgba(180,150,255,0.6))' }}
-                    >
-                      💜
-                    </span>
-                  ))}
-                </div>
+                {renderStars(stars.sleep.successes, '💜')}
               </div>
-
-              {/* Calm */}
               <div className="flex items-center gap-3">
                 <span className="text-[10px] text-white/60 w-12">Calm</span>
-                <div className="flex flex-wrap gap-1">
-                  {Array.from({ length: stars.calm.attempts }).map((_, i) => (
-                    <span
-                      key={i}
-                      className={`text-lg ${i < stars.calm.successes ? 'opacity-100' : 'opacity-40'}`}
-                      style={{ filter: 'drop-shadow(0 0 4px rgba(100,180,255,0.5))' }}
-                    >
-                      💙
-                    </span>
-                  ))}
-                </div>
+                {renderStars(stars.calm.successes, '💙')}
               </div>
             </div>
 
             <div className="mt-6">
               <p className="text-[10px] text-white/50 text-center mb-2">
                 🧡 Food — 💚 Walk — 💜 Sleep — 💙 Calm
-              </p>
-              <p className="text-[10px] text-white/50 text-center mb-4">
-                Bright = you made it. Soft = you tried. Both count.
               </p>
               <p className="text-sm text-white text-center font-medium leading-relaxed">
                 {buildStarsPageText(data)}
@@ -195,12 +160,14 @@ export default function OviLetter({ data, dailyHistory, onClose }: OviLetterProp
             )}
           </div>
 
-          <button
-            onClick={onClose}
-            className="w-full max-w-sm mx-auto bg-[#4A2C35] text-white py-4 rounded-full font-bold active:scale-95 shadow-[0_8px_20px_-4px_rgba(74,44,53,0.2)]"
-          >
-            Done
-          </button>
+          <div className="w-full max-w-sm mx-auto mt-auto pb-8">
+            <button
+              onClick={onClose}
+              className="w-full bg-[#4A2C35] text-white py-4 rounded-full font-bold active:scale-95 shadow-[0_8px_20px_-4px_rgba(74,44,53,0.2)]"
+            >
+              Done
+            </button>
+          </div>
         </>
       )}
     </div>

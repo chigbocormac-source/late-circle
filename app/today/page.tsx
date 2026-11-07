@@ -189,7 +189,7 @@ export default function Home() {
     };
     
     const keys = Object.keys(history).sort();
-    if (keys.length > 14) delete history[keys[0]];
+    if (keys.length > 60) delete history[keys[0]];
     
     localStorage.setItem('lateCircleDailyHistory', JSON.stringify(history));
   };
