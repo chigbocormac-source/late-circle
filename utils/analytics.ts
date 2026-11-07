@@ -81,3 +81,14 @@ export function trackAppOpened(currentDay: number) {
     }
   } catch {}
 }
+
+// Local YYYY-MM-DD. NOT toISOString().split('T')[0] — that returns UTC
+// and would misattribute events between 11pm-midnight WAT to the previous day.
+// Used by today/page.tsx, cycle/page.tsx, and wins/page.tsx to key daily history
+// and the once-per-day letter gate consistently.
+export function localDateKey(d: Date = new Date()): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}

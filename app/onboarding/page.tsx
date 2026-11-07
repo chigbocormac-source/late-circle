@@ -25,6 +25,7 @@ export default function Onboarding() {
     let averageCycle = 35; 
     let cycleText = "35 days girl";
     let realDiffDays = 0;
+    let estimated = true;
 
     if (lastPeriodDate && prevPeriodDate) {
       const [ly, lm, ld] = lastPeriodDate.split('-').map(Number);
@@ -37,9 +38,19 @@ export default function Onboarding() {
       if (realDiffDays >= 25 && realDiffDays <= 45) {
         averageCycle = realDiffDays;
         cycleText = `${realDiffDays} days girl`;
+        estimated = false;
       } else {
         cycleText = "35 days girl (using average)";
       }
+    } else if (cycleType === 'Monthly') {
+      averageCycle = 28;
+      cycleText = "28 days girl (estimate)";
+    } else if (cycleType === 'Often Late') {
+      averageCycle = 38;
+      cycleText = "38 days girl (estimate)";
+    } else if (cycleType === 'Very Irregular') {
+      averageCycle = 45;
+      cycleText = "45 days girl (estimate)";
     }
 
     const last = lastPeriodDate ? new Date(lastPeriodDate) : new Date();
@@ -55,7 +66,8 @@ export default function Onboarding() {
       nextRange: `${formatDate(nextStart)} - ${formatDate(nextEnd)}`,
       averageCycle,
       realDiffDays,
-      isIrregular: realDiffDays > 35
+      isIrregular: realDiffDays > 35,
+      estimated,
     };
   };
 
@@ -70,10 +82,19 @@ export default function Onboarding() {
     localStorage.setItem('lateCirclePromised7Days', 'true');
     localStorage.setItem('lateCircleCommitDate', new Date().toISOString());
 
-    const history = JSON.parse(localStorage.getItem('lateCircleHistory') || '[]');
-    if (prevPeriodDate) history.push(prevPeriodDate);
-    if (lastPeriodDate) history.push(lastPeriodDate);
-    localStorage.setItem('lateCircleHistory', JSON.stringify(history));
+    // Fresh history — do NOT append to a stale one from a previous onboarding run
+    // (e.g. testing on the same phone with a second user). Replaces, not pushes.
+    const freshHistory: string[] = [];
+    if (prevPeriodDate) freshHistory.push(prevPeriodDate);
+    if (lastPeriodDate) freshHistory.push(lastPeriodDate);
+    localStorage.setItem('lateCircleHistory', JSON.stringify(freshHistory));
+
+    // Clear stale daily/phase/letter state from any previous session or user
+    localStorage.removeItem('lateCircleData');
+    localStorage.removeItem('lateCircleDailyHistory');
+    localStorage.removeItem('lateCircleLastPhase');
+    localStorage.removeItem('lateCircleLastFoodLog');
+    localStorage.removeItem('lateCircleLastLetterDate');
 
     router.push('/today');
   };
@@ -105,7 +126,10 @@ export default function Onboarding() {
           <button onClick={() => setStep(1)} className="w-full bg-[#4A2C35] text-white py-4 rounded-full text-[16px] font-bold mt-auto active:scale-[0.98] shadow-[0_16px_32px_-8px_rgba(74,44,53,0.35),0_6px_16px_-6px_rgba(74,44,53,0.2)] transition-all duration-300">
             Show me how to stay balanced →
           </button>
-          <p className="text-[9px] text-[#4A2C35]/30 text-center mt-6 tracking-wide">Not a medical diagnosis. Lifestyle tracking only.</p>
+          <p className="text-[10px] text-[#4A2C35]/40 text-center mt-6 tracking-wide max-w-75 leading-relaxed">
+            Not a medical diagnosis. Lifestyle tracking only.
+            If your period is 90+ days late, or you have severe pain or very heavy bleeding, please see a doctor.
+          </p>
         </div>
       )}
 
@@ -192,7 +216,9 @@ export default function Onboarding() {
         return (
           <div className="flex flex-col items-center flex-1 w-full max-w-sm animate-slide-up overflow-y-auto pb-4">
             <h1 className="text-[26px] font-bold leading-tight mb-2 text-center">
-              {prevPeriodDate ? `You are a ${prediction.cycleText}.` : `Your last cycle was ${prediction.averageCycle} days.`} Your body is talking. Let's listen. 💜
+              {prevPeriodDate 
+                ? `You are a ${prediction.cycleText}. Your body is talking. Let's listen. 💜`
+                : `Let's learn your pattern together. We'll start with an estimate. 💜`}
             </h1>
 
             <div className="w-full bg-white rounded-[20px] p-5 border border-white shadow-[0_24px_48px_-16px_rgba(74,44,53,0.12),0_12px_24px_-12px_rgba(255,182,193,0.2)] mb-6 mt-4">
@@ -204,18 +230,22 @@ export default function Onboarding() {
                 </div>
                 {prevPeriodDate && <p className="text-[13px] font-bold text-[#4A2C35] bg-[#FFF0F3] px-3 py-1 rounded-full">= {prediction.realDiffDays} days</p>}
               </div>
-{prediction.realDiffDays > 35 ? (
-  <p className="text-[12px] text-[#4A2C35]/60 mb-3">That's longer than the 21-35 day range. Let's track it.</p>
-) : (
-  <p className="text-[12px] text-[#4A2C35]/60 mb-3">That's within the normal 21-35 day range. Let's keep it steady.</p>
-)}
+              {prediction.realDiffDays > 35 ? (
+                <p className="text-[12px] text-[#4A2C35]/60 mb-3">That's longer than the 21-35 day range. Let's track it.</p>
+              ) : prediction.estimated ? (
+                <p className="text-[12px] text-[#4A2C35]/60 mb-3">We don't have your real numbers yet. This is a starting point — it will get sharper as you log.</p>
+              ) : (
+                <p className="text-[12px] text-[#4A2C35]/60 mb-3">That's within the normal 21-35 day range. Let's keep it steady.</p>
+              )}
               <p className="text-[16px] font-bold text-[#4A2C35] mb-1">Next window: {prediction.nextRange}</p>
               <p className="text-[12px] text-[#4A2C35]/50 mb-1">
-  Keep pad handy from {prediction.nextRange.split(' - ')[0]}. 
-  {prediction.realDiffDays > 35 
-    ? " Your pattern is irregular, so this is a window, not a promise." 
-    : " This is your normal window."}
-</p>
+                Keep pad handy from {prediction.nextRange.split(' - ')[0]}. 
+                {prediction.realDiffDays > 35 
+                  ? " Your pattern is irregular, so this is a window, not a promise." 
+                  : prediction.estimated
+                  ? " This is an estimate until we track more of your cycles."
+                  : " This is your normal window."}
+              </p>
             </div>
 
             <button onClick={() => setStep(4)} className="w-full bg-[#4A2C35] text-white py-4 rounded-full font-bold shadow-[0_16px_32px_-8px_rgba(74,44,53,0.35)] mt-auto active:scale-[0.98] transition-all">
@@ -280,34 +310,37 @@ export default function Onboarding() {
         </div>
       )}
 
-      {/* SCREEN 6: 5 GIRLS */}
+      {/* SCREEN 6: 5 GIRLS — percentage labels */}
       {step === 6 && (
         <div className="flex flex-col flex-1 w-full max-w-sm animate-slide-up overflow-y-auto pb-4">
           <h1 className="text-[26px] font-bold leading-tight mb-2 text-center">5 Girls in 1 Body</h1>
-          <p className="text-[13px] text-[#4A2C35]/60 text-center mb-6 px-4">
-            Your body is not one mood. You are:
+          <p className="text-[13px] text-[#4A2C35]/60 text-center mb-4 px-4">
+            Your body is not one mood. You are 5 girls.
+          </p>
+          <p className="text-[12px] text-[#4A2C35]/50 text-center mb-6 px-4 leading-relaxed">
+            They don't run on fixed days. They run on percentages — so a 28-day girl and a 45-day girl are both seen correctly.
           </p>
 
           <div className="flex flex-col gap-2 w-full mb-8">
             <div className="bg-white p-3.5 rounded-xl border border-[#4A2C35]/5 flex justify-between items-center">
-              <span className="text-[13px] font-bold">🌙 Rest Girl (Days 1-4)</span>
-              <span className="text-[11px] text-[#4A2C35]/50">Bleeding, rest</span>
+              <span className="text-[13px] font-bold">🌙 Rest Girl</span>
+              <span className="text-[11px] text-[#4A2C35]/50">First 15% • bleeding, rest</span>
             </div>
             <div className="bg-white p-3.5 rounded-xl border border-[#4A2C35]/5 flex justify-between items-center">
-              <span className="text-[13px] font-bold">🌱 Fresh Girl (Days 5-12)</span>
-              <span className="text-[11px] text-[#4A2C35]/50">Light, active</span>
+              <span className="text-[13px] font-bold">🌱 Fresh Girl</span>
+              <span className="text-[11px] text-[#4A2C35]/50">15% – 35% • light, active</span>
             </div>
             <div className="bg-white p-3.5 rounded-xl border border-[#4A2C35]/5 flex justify-between items-center">
-              <span className="text-[13px] font-bold">✨ Fine Girl (Days 13-23)</span>
-              <span className="text-[11px] text-[#4A2C35]/50">Confident, glowing</span>
+              <span className="text-[13px] font-bold">✨ Fine Girl</span>
+              <span className="text-[11px] text-[#4A2C35]/50">35% – 60% • confident, glowing</span>
             </div>
             <div className="bg-white p-3.5 rounded-xl border border-[#4A2C35]/5 flex justify-between items-center">
-              <span className="text-[13px] font-bold">🍚 Chop Girl (Days 24-30)</span>
-              <span className="text-[11px] text-[#4A2C35]/50">Hungry, cravings</span>
+              <span className="text-[13px] font-bold">🍚 Chop Girl</span>
+              <span className="text-[11px] text-[#4A2C35]/50">60% – 80% • hungry, cravings</span>
             </div>
             <div className="bg-white p-3.5 rounded-xl border border-[#4A2C35]/5 flex justify-between items-center">
-              <span className="text-[13px] font-bold">💜 Ready Girl (Days 31-40+)</span>
-              <span className="text-[11px] text-[#4A2C35]/50">Waiting, preparing</span>
+              <span className="text-[13px] font-bold">💜 Ready Girl</span>
+              <span className="text-[11px] text-[#4A2C35]/50">Last 20% • waiting, preparing</span>
             </div>
           </div>
 
@@ -368,7 +401,10 @@ export default function Onboarding() {
           <button onClick={() => setStep(9)} className="w-full bg-[#4A2C35] text-white py-4 rounded-full font-bold shadow-[0_16px_32px_-8px_rgba(74,44,53,0.35)] mt-auto active:scale-[0.98] transition-all">
             I understand →
           </button>
-          <p className="text-[9px] text-[#4A2C35]/30 mt-4 px-2">Lifestyle tracking only. Not a medical diagnosis. If your period is 90+ days late, please see a doctor.</p>
+          <p className="text-[10px] text-[#4A2C35]/40 mt-4 px-2 leading-relaxed">
+            Lifestyle tracking only. Not a medical diagnosis.
+            If your period is 90+ days late, or you have severe pain or very heavy bleeding, please see a doctor.
+          </p>
         </div>
       )}
 

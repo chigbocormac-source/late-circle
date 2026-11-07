@@ -1,35 +1,47 @@
 export type PhaseId = 'rest' | 'fresh' | 'fine' | 'chop' | 'ready';
 
 export function getCyclePhase(day: number, average: number = 35) {
-  const daysToNext = average - day;
+  // Guard against corrupt inputs
+  const safeDay = Math.max(1, day || 1);
+  const safeAvg = Math.max(21, average || 35);
 
-  if (day <= 5) return { id: 'rest' as PhaseId, name: 'Rest Girl', emoji: '🌙', color: '#9CAF88', focus: ['sleep', 'walk'] };
-  if (day <= 12) return { id: 'fresh' as PhaseId, name: 'Fresh Girl', emoji: '🌱', color: '#9CAF88', focus: ['walk', 'food'] };
-  if (day <= 23) return { id: 'fine' as PhaseId, name: 'Fine Girl', emoji: '✨', color: '#D4AF37', focus: ['food', 'walk', 'sleep', 'calm'] };
-  
-  // If we are in the last 7 days before the next period, it's Ready Girl
-  if (daysToNext <= 7) {
-    return { id: 'ready' as PhaseId, name: 'Ready Girl', emoji: '💜', color: '#8A2C3E', focus: ['sleep', 'calm', 'food'] };
-  }
-  
-  // Otherwise, it's Chop Girl (Day 24 up to the last 7 days)
-  return { id: 'chop' as PhaseId, name: 'Chop Girl', emoji: '🍚', color: '#FF8FA3', focus: ['food', 'calm', 'walk'] };
+  // Percentage of the cycle we're in (0..100)
+  const pct = (safeDay / safeAvg) * 100;
+
+  // Phase boundaries per V1.2 spec:
+  //   Rest:  First 15%
+  //   Fresh: 15% – 35%
+  //   Fine:  35% – 60%
+  //   Chop:  60% – 80%
+  //   Ready: Last 20% (i.e. 80% – 100%+)
+  //
+  // Using the closed-interval lower bounds consistently:
+  //   pct <= 15  → rest
+  //   pct <= 35  → fresh
+  //   pct <= 60  → fine
+  //   pct <= 80  → chop
+  //   pct >  80  → ready
+  if (pct <= 15) return { id: 'rest' as PhaseId,  name: 'Rest Girl',  emoji: '🌙', color: '#9CAF88', focus: ['sleep', 'calm'] };
+  if (pct <= 35) return { id: 'fresh' as PhaseId, name: 'Fresh Girl', emoji: '🌱', color: '#9CAF88', focus: ['walk', 'food'] };
+  if (pct <= 60) return { id: 'fine' as PhaseId,  name: 'Fine Girl',  emoji: '✨', color: '#D4AF37', focus: ['food', 'walk', 'sleep', 'calm'] };
+  if (pct <= 80) return { id: 'chop' as PhaseId,  name: 'Chop Girl',  emoji: '🍚', color: '#FF8FA3', focus: ['food', 'calm'] };
+  return              { id: 'ready' as PhaseId, name: 'Ready Girl', emoji: '💜', color: '#8A2C3E', focus: ['sleep', 'calm'] };
 }
 
 export const oviWelcome: Record<PhaseId, string> = {
-  rest: "You are in your Rest days. Your body is resting from bleeding. That is why you feel tired. Rest well today.",
+  rest: "You are in your Rest days. Your body is resting from bleeding. That is why you feel tired. Sleep well and take 90 seconds of Calm today.",
   fresh: "You are in your Fresh days. Bleeding has finished and your energy is coming back. It is a good time to start again.",
   fine: "You are in your Fine days. You feel fine, glowing and confident. Use this energy to do more today.",
   chop: "You are in your Chop days. You want to eat everything and feel more emotional. It is your pattern, not you.",
   ready: "You are in your Ready days. Your period is close and your body is slowing down. Put a pad in your bag today."
 };
 
-// Note: The text below is for the 5 Girls Explainer Modal. 
+// Note: The text below is for the 5 Girls Explainer Modal.
 // We will use this in the next file we update.
 export const oviGists: Record<PhaseId, Record<string, string>> = {
   rest: {
     food: "No appetite? It's normal. Keep small plate. Indomie? Add 2 eggs and cabbage.",
-    walk: "Waist paining you? Lying down makes it worse. Walk small to the junction. It helps blood flow.",
+    walk: "If you feel like moving, a slow walk to the junction is enough. If not, rest. It is okay.",
     sleep: "Body is tired. In bed by 10:30pm. Warm water and early sleep.",
     calm: "Close your eyes for 90 seconds. Breathe in, out. Tell yourself, this will pass."
   },
@@ -58,6 +70,7 @@ export const oviGists: Record<PhaseId, Record<string, string>> = {
     calm: "Want ice cream or petting today? It's hormones. Do 90 secs calm. Tell your person you need a soft hug."
   }
 };
+
 export function getMorningGreeting(
   girl: PhaseId,
   yesterdayCount: number | null

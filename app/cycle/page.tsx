@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { getCyclePhase, PhaseId } from '../../utils/cycleEngine';
-import { logEvent } from '../../utils/analytics';
+import { logEvent, localDateKey } from '../../utils/analytics';
 import { generateShareCard, getCaption, blobToDataURL } from '../../utils/shareCard';
 import OviLetter from './OviLetter';
 import { buildLetterData } from '../../utils/oviLetter';
@@ -34,6 +34,7 @@ export default function CyclePage() {
   const [previousPeriodDate, setPreviousPeriodDate] = useState<string | null>(null);
   const [showLetter, setShowLetter] = useState(false);
   const [letterData, setLetterData] = useState<any>(null);
+  const [letterShownToday, setLetterShownToday] = useState(false);
 
   // Share preview fallback
   const [sharePreview, setSharePreview] = useState<{ url: string; caption: string } | null>(null);
@@ -48,6 +49,14 @@ export default function CyclePage() {
     if (savedHistory) setHistory(JSON.parse(savedHistory));
     const savedTags = localStorage.getItem('lateCircleTags');
     if (savedTags) setSelectedTags(JSON.parse(savedTags));
+
+    // Letter: hide the card if she already opened a letter today.
+    // Use LOCAL date key so 11pm-midnight events aren't attributed to yesterday.
+    const lastLetterDate = localStorage.getItem('lateCircleLastLetterDate');
+    const todayKey = localDateKey();
+    if (lastLetterDate === todayKey) {
+      setLetterShownToday(true);
+    }
     
     setToday(new Date());
     setIsLoaded(true);
@@ -141,6 +150,11 @@ export default function CyclePage() {
   };
 
   const handleOpenLetter = () => {
+    // Mark letter as shown for today (before building, so a crash mid-build still hides the card).
+    // Use LOCAL date key so 11pm-midnight events aren't attributed to yesterday.
+    localStorage.setItem('lateCircleLastLetterDate', localDateKey());
+    setLetterShownToday(true);
+
     const dailyHistory = JSON.parse(localStorage.getItem('lateCircleDailyHistory') || '{}');
     const symptoms = JSON.parse(localStorage.getItem('lateCircleSymptoms') || '[]');
     const letter = buildLetterData(
@@ -303,8 +317,8 @@ export default function CyclePage() {
         </div>
       )}
 
-            {/* WAITING CARD — Only appears when lateDays >= 3 */}
-      {lateDays >= 3 && (
+      {/* WAITING CARD — only if 3+ days late, 5+ days logged, and not shown today */}
+      {lateDays >= 3 && Object.keys(JSON.parse(localStorage.getItem('lateCircleDailyHistory') || '{}')).length >= 5 && !letterShownToday && (
         <div className="w-full max-w-sm bg-white border border-[#4A2C35]/5 rounded-3xl p-5 shadow-[0_16px_32px_-12px_rgba(74,44,53,0.1)] mb-4 mt-2">
           <h2 className="text-sm font-bold text-[#4A2C35] mb-2">A letter from Ovi, for you.</h2>
           <p className="text-xs text-[#4A2C35]/70 mb-4 leading-relaxed">
@@ -334,13 +348,10 @@ export default function CyclePage() {
         )}
       </div>
 
-
       {/* Period start button */}
       <button onClick={() => setShowConfirm(true)} className="w-full max-w-sm bg-[#4A2C35] text-white py-3 rounded-full text-sm font-bold shadow-[0_8px_20px_-4px_rgba(74,44,53,0.25)] active:scale-95 transition-transform mb-8">
         My period started today 🌸
       </button>
-
-      
 
       {/* 5 Girls Card */}
       <div className="w-full max-w-sm bg-white border border-[#4A2C35]/5 rounded-3xl p-5 shadow-[0_16px_32px_-12px_rgba(74,44,53,0.1)] mb-4">
@@ -350,28 +361,28 @@ export default function CyclePage() {
         </div>
         
         <div className="flex flex-col gap-1">
-          <button onClick={() => { setSelectedGirl('rest'); logEvent('girl_explainer_opened', { girl: 'rest' }); }} className={`flex flex-col text-left p-2 rounded-xl transition-all active:scale-[0.98] ${currentDay<=5?'bg-[#FFF0F3] shadow-sm':''}`}>
+          <button onClick={() => { setSelectedGirl('rest'); logEvent('girl_explainer_opened', { girl: 'rest' }); }} className={`flex flex-col text-left p-2 rounded-xl transition-all active:scale-[0.98] ${girl.id === 'rest' ? 'bg-[#FFF0F3] shadow-sm' : ''}`}>
             <div className="flex justify-between items-center w-full">
-              <span className={`text-sm ${currentDay<=5 ? 'font-bold text-[#4A2C35]' : 'text-[#4A2C35]/80'}`}>🌙 Rest Girl</span>
+              <span className={`text-sm ${girl.id === 'rest' ? 'font-bold text-[#4A2C35]' : 'text-[#4A2C35]/80'}`}>🌙 Rest Girl</span>
               <div className="flex items-center gap-2"><span className="text-[10px] text-[#4A2C35]/40">First 15%</span><span className="text-[#4A2C35]/30 text-lg leading-none">›</span></div>
             </div>
-            <span className="text-[10px] text-[#4A2C35]/50 ml-6">{currentDay<=5 ? <span className="text-[#FF8FA3] font-bold">Tired. You are here 💜</span> : "Tired"}</span>
+            <span className="text-[10px] text-[#4A2C35]/50 ml-6">{girl.id === 'rest' ? <span className="text-[#FF8FA3] font-bold">Tired. You are here 💜</span> : "Tired"}</span>
           </button>
 
-          <button onClick={() => { setSelectedGirl('fresh'); logEvent('girl_explainer_opened', { girl: 'fresh' }); }} className={`flex flex-col text-left p-2 rounded-xl transition-all active:scale-[0.98] ${currentDay>5&&currentDay<=12?'bg-[#FFF0F3] shadow-sm':''}`}>
+          <button onClick={() => { setSelectedGirl('fresh'); logEvent('girl_explainer_opened', { girl: 'fresh' }); }} className={`flex flex-col text-left p-2 rounded-xl transition-all active:scale-[0.98] ${girl.id === 'fresh' ? 'bg-[#FFF0F3] shadow-sm' : ''}`}>
             <div className="flex justify-between items-center w-full">
-              <span className={`text-sm ${currentDay>5&&currentDay<=12 ? 'font-bold text-[#4A2C35]' : 'text-[#4A2C35]/80'}`}>🌱 Fresh Girl</span>
+              <span className={`text-sm ${girl.id === 'fresh' ? 'font-bold text-[#4A2C35]' : 'text-[#4A2C35]/80'}`}>🌱 Fresh Girl</span>
               <div className="flex items-center gap-2"><span className="text-[10px] text-[#4A2C35]/40">15% - 35%</span><span className="text-[#4A2C35]/30 text-lg leading-none">›</span></div>
             </div>
-            <span className="text-[10px] text-[#4A2C35]/50 ml-6">{currentDay>5&&currentDay<=12 ? <span className="text-[#FF8FA3] font-bold">Energy back. You are here 💜</span> : "Energy back"}</span>
+            <span className="text-[10px] text-[#4A2C35]/50 ml-6">{girl.id === 'fresh' ? <span className="text-[#FF8FA3] font-bold">Energy back. You are here 💜</span> : "Energy back"}</span>
           </button>
 
-          <button onClick={() => { setSelectedGirl('fine'); logEvent('girl_explainer_opened', { girl: 'fine' }); }} className={`flex flex-col text-left p-2 rounded-xl transition-all active:scale-[0.98] ${currentDay>12&&currentDay<=23?'bg-[#FFF0F3] shadow-sm':''}`}>
+          <button onClick={() => { setSelectedGirl('fine'); logEvent('girl_explainer_opened', { girl: 'fine' }); }} className={`flex flex-col text-left p-2 rounded-xl transition-all active:scale-[0.98] ${girl.id === 'fine' ? 'bg-[#FFF0F3] shadow-sm' : ''}`}>
             <div className="flex justify-between items-center w-full">
-              <span className={`text-sm ${currentDay>12&&currentDay<=23 ? 'font-bold text-[#4A2C35]' : 'text-[#4A2C35]/80'}`}>✨ Fine Girl</span>
+              <span className={`text-sm ${girl.id === 'fine' ? 'font-bold text-[#4A2C35]' : 'text-[#4A2C35]/80'}`}>✨ Fine Girl</span>
               <div className="flex items-center gap-2"><span className="text-[10px] text-[#4A2C35]/40">35% - 60%</span><span className="text-[#4A2C35]/30 text-lg leading-none">›</span></div>
             </div>
-            <span className="text-[10px] text-[#4A2C35]/50 ml-6">{currentDay>12&&currentDay<=23 ? <span className="text-[#FF8FA3] font-bold">Glowing. You are here 💜</span> : "Glowing"}</span>
+            <span className="text-[10px] text-[#4A2C35]/50 ml-6">{girl.id === 'fine' ? <span className="text-[#FF8FA3] font-bold">Glowing. You are here 💜</span> : "Glowing"}</span>
           </button>
 
           <button onClick={() => { setSelectedGirl('chop'); logEvent('girl_explainer_opened', { girl: 'chop' }); }} className={`flex flex-col text-left p-2 rounded-xl transition-all active:scale-[0.98] ${girl.id === 'chop'?'bg-[#FFF0F3] shadow-sm':''}`}>
@@ -391,7 +402,6 @@ export default function CyclePage() {
           </button>
         </div>
       </div>
-
 
       {/* History Button */}
       <button onClick={() => setShowHistory(true)} className="w-full max-w-sm bg-white border border-[#4A2C35]/5 rounded-2xl p-4 flex justify-between items-center shadow-[0_8px_20px_-8px_rgba(74,44,53,0.08)] active:scale-[0.98] transition-transform">
@@ -416,7 +426,7 @@ export default function CyclePage() {
 
       {/* UNDO RESET MODAL */}
       {showUndo && (
-        <div className="fixed inset-0 bg-[#4A2C35]/20 backdrop-blur-sm z-100lex items-center justify-center p-6 animate-fade-in">
+        <div className="fixed inset-0 bg-[#4A2C35]/20 backdrop-blur-sm z-100 flex items-center justify-center p-6 animate-fade-in">
           <div className="bg-white border border-[#4A2C35]/5 rounded-3xl p-6 w-full max-w-sm shadow-[0_24px_48px_-16px_rgba(74,44,53,0.25)] text-center">
             <div className="w-16 h-16 rounded-full bg-[#9CAF88]/15 flex items-center justify-center mx-auto mb-4">
               <span className="text-3xl">🌱</span>

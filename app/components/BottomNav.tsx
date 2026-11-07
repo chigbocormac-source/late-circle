@@ -44,15 +44,15 @@ export default function BottomNav() {
 
         {/* MY WINS TAB */}
         <Link 
-          href="/insights" 
+          href="/wins" 
           className={`flex items-center gap-2 px-5 py-2.5 rounded-full transition-all duration-300 ${
-            mounted && pathname === '/insights' 
+            mounted && pathname === '/wins' 
               ? 'bg-[#4A2C35] text-white shadow-sm' 
               : 'text-[#4A2C35]/40 hover:text-[#4A2C35]/70'
           }`}
         >
           <span className="text-[16px]">🏆</span>
-          {mounted && pathname === '/insights' && <span className="text-sm font-bold">My Wins</span>}
+          {mounted && pathname === '/wins' && <span className="text-sm font-bold">My Wins</span>}
         </Link>
 
       </div>

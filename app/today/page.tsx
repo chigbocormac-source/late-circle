@@ -5,7 +5,8 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '../supabase';
 import { getCyclePhase, oviGists, PhaseId, oviWelcome, getMorningGreeting } from '../../utils/cycleEngine';
 import InstallHint from '../components/InstallHint';
-import { trackAppOpened, logEvent } from '../../utils/analytics';
+import { trackAppOpened, logEvent, localDateKey } from '../../utils/analytics';
+
 
 function getCycleData(lastPeriodDateString: string | null, cycleLengths: number[] = []) {
   if (!lastPeriodDateString) return { currentDay: 1, average: 35, lateDays: 0 };
@@ -114,8 +115,28 @@ export default function Home() {
     const savedPhase = localStorage.getItem('lateCircleLastPhase');
     const cycleDataForPhase = getCycleData(savedDate);
     const currentPhaseData = getCyclePhase(cycleDataForPhase.currentDay, cycleDataForPhase.average);
+
+    // Build the morning greeting first — we use it to decide whether to also
+    // show the phase-change welcome modal (avoids double-greeting on that day).
+    const dailyHistory = JSON.parse(localStorage.getItem('lateCircleDailyHistory') || '{}');
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = localDateKey(yesterday);   // ← local date, not UTC
+    const yesterdayData = dailyHistory[yesterdayStr];
+    const yesterdayCount: number | null = yesterdayData ? yesterdayData.count : null;
+
+    let greeting = '';
+    try {
+      greeting = getMorningGreeting(currentPhaseData.id as PhaseId, yesterdayCount) || '';
+    } catch {
+      greeting = '';
+    }
+    setMorningGreeting(greeting);
+
     if (savedPhase !== currentPhaseData.id) {
-      setShowOviWelcome(true);
+      // Only show the blocking "Welcome to X" modal if there's no greeting.
+      // On phase-change day, the greeting wins — no double-greeting.
+      if (!greeting) setShowOviWelcome(true);
       localStorage.setItem('lateCircleLastPhase', currentPhaseData.id);
     }
 
@@ -131,16 +152,7 @@ export default function Home() {
     
     // TELEMETRY: log app open (deduped inside trackAppOpened for StrictMode)
     trackAppOpened(cycleDataForPhase.currentDay);
-        // Get yesterday's count for the greeting
-    const dailyHistory = JSON.parse(localStorage.getItem('lateCircleDailyHistory') || '{}');
-    const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
-    const yesterdayStr = yesterday.toISOString().split('T')[0];
-    const yesterdayData = dailyHistory[yesterdayStr];
-    const yesterdayCount = yesterdayData ? yesterdayData.count : null;
     
-    const greeting = getMorningGreeting(currentPhaseData.id, yesterdayCount);
-    setMorningGreeting(greeting); 
     setIsLoaded(true);
   }, [router]);
 
@@ -176,7 +188,8 @@ export default function Home() {
     setCircles(newState);
     localStorage.setItem('lateCircleData', JSON.stringify(newState));
 
-    const today = new Date().toISOString().split('T')[0];
+    // Local date key — see localDateKey() note at top of file.
+    const today = localDateKey();
     const closedCount = [newState.food, newState.walk, newState.sleep, newState.calm].filter(Boolean).length;
     
     let history = JSON.parse(localStorage.getItem('lateCircleDailyHistory') || '{}');
@@ -205,7 +218,6 @@ export default function Home() {
   };
 
   const handleWalk = () => {
-    // Removed setShowActionSheet(false) so the menu stays open
     setShowWinCelebration(true);
     setTimeout(() => {
       setShowWinCelebration(false);
@@ -298,7 +310,11 @@ export default function Home() {
   if (!isLoaded) return null;
 
   const getBigButtonText = () => {
-    if (closedCount === 4) return "I'm done for today 💚";
+    if (closedCount === 4) {
+      // Don't say "I'm done for today" before evening — it breaks the narrative.
+      if (nowHour >= 19) return "I'm done for today 💚";
+      return "All 4 closed. Come back tonight 🌙";
+    }
     if (closedCount === 0) return "Start my circles ➔";
     if (closedCount === 3) return "Finish my last circle ➔";
     return "Close my next circle ➔";
@@ -340,7 +356,7 @@ export default function Home() {
         </div>
       )}
 
-            <div className="flex flex-col items-center w-full relative mb-2 px-8 text-center mt-2 shrink-0">
+      <div className="flex flex-col items-center w-full relative mb-2 px-8 text-center mt-2 shrink-0">
         <h1 className="text-2xl font-serif text-[#4A2C35] mb-1 tracking-[0.2em]">YOUR CIRCLE</h1>
         <p className="text-[#4A2C35]/50 text-xs font-medium">Today • {todayStr}</p>
         
@@ -438,19 +454,24 @@ export default function Home() {
       <div className="w-full max-w-sm flex flex-col items-center mb-24 mt-auto shrink-0">
         <button 
           onClick={() => { 
-            if (closedCount === 4) { 
+            if (closedCount === 4 && nowHour >= 19) { 
               setShowGoodnight(true); 
+            } else if (closedCount === 4) {
+              // All 4 closed before 7pm — no Goodnight yet, no action sheet either.
+              // The button already tells her to come back tonight; do nothing.
             } else { 
               setShowActionSheet(true); 
             } 
           }} 
           className={`w-full py-4 rounded-full text-[16px] font-bold transition-all ${
-            closedCount === 4 
+            closedCount === 4 && nowHour >= 19
               ? 'bg-[#4A2C35] text-white shadow-[0_4px_20px_rgba(74,44,53,0.3)] animate-pulse active:scale-95' 
+              : closedCount === 4
+              ? 'bg-[#9CAF88]/60 text-white shadow-[0_4px_20px_rgba(156,175,136,0.2)] cursor-default'
               : 'bg-[#9CAF88] text-white shadow-[0_4px_20px_rgba(156,175,136,0.3)] active:scale-95'
           }`}
         >
-          {closedCount === 4 ? "I'm done for today 💚" : getBigButtonText()}
+          {getBigButtonText()}
         </button>
       </div>
 
