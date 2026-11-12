@@ -5,8 +5,6 @@ import { useRouter } from 'next/navigation';
 import { getCyclePhase, PhaseId, getRealCycleLength } from '../../utils/cycleEngine';
 import { logEvent, localDateKey } from '../../utils/analytics';
 import { generateShareCard, getCaption, blobToDataURL } from '../../utils/shareCard';
-import SoftPlace from './SoftPlace';
-import { buildSoftPlaceData } from '../../utils/softPlace';
 
 export default function CyclePage() {
   const router = useRouter();
@@ -22,9 +20,6 @@ export default function CyclePage() {
   const [showHistory, setShowHistory] = useState(false);
   const [showUndo, setShowUndo] = useState(false);
   const [previousPeriodDate, setPreviousPeriodDate] = useState<string | null>(null);
-  const [showLetter, setShowLetter] = useState(false);
-  const [letterData, setLetterData] = useState<any>(null);
-  const [letterShownToday, setLetterShownToday] = useState(false);
 
   // Share
   const [sharePreview, setSharePreview] = useState<{ url: string; caption: string } | null>(null);
@@ -39,10 +34,6 @@ export default function CyclePage() {
     if (savedHistory) setHistory(JSON.parse(savedHistory));
     const savedTags = localStorage.getItem('lateCircleTags');
     if (savedTags) setSelectedTags(JSON.parse(savedTags));
-
-    const lastOpenedDate = localStorage.getItem('lateCircleSoftPlaceOpenedDate');
-    const todayKey = localDateKey();
-    if (lastOpenedDate === todayKey) setLetterShownToday(true);
 
     setToday(new Date());
     setIsLoaded(true);
@@ -144,28 +135,6 @@ export default function CyclePage() {
     localStorage.setItem('lateCircleHistory', JSON.stringify(newHistory));
     setShowUndo(false);
     setPreviousPeriodDate(null);
-  };
-
-  const handleOpenSoftPlace = () => {
-    const todayKey = localDateKey();
-    localStorage.setItem('lateCircleSoftPlaceOpenedDate', todayKey);
-    setLetterShownToday(true);
-
-    const dailyHistory = JSON.parse(localStorage.getItem('lateCircleDailyHistory') || '{}');
-    const reason = localStorage.getItem('lateCircleSoftPlaceReason');
-    const futureLine = localStorage.getItem('lateCircleFutureLine');
-    const letter = buildSoftPlaceData(
-      girl.id,
-      lastPeriodDate,
-      currentDay,
-      average,
-      dailyHistory,
-      history,
-      reason,
-      futureLine
-    );
-    setLetterData(letter);
-    setShowLetter(true);
   };
 
   const handleShareGirl = async () => {
@@ -389,31 +358,6 @@ export default function CyclePage() {
         </div>
       )}
 
-      {/* WAITING CARD — 3+ days late, 5+ days logged, once per day */}
-      {lateDays >= 3 && Object.keys(JSON.parse(localStorage.getItem('lateCircleDailyHistory') || '{}')).length >= 5 && !letterShownToday && (
-        <div className="w-full max-w-sm bg-white border border-[#4A2C35]/5 rounded-3xl p-5 shadow-[0_16px_32px_-12px_rgba(74,44,53,0.1)] mb-4 mt-2">
-          <h2 className="text-sm font-bold text-[#4A2C35] mb-2">Fine girl, come and rest.</h2>
-          <p className="text-xs text-[#4A2C35]/70 mb-3 leading-relaxed">
-            I have been watching with you. You are {lateDays} {lateDays === 1 ? 'day' : 'days'} late.
-          </p>
-          <p className="text-xs text-[#4A2C35]/70 mb-4 leading-relaxed">
-            You tried {(() => {
-              const dh = JSON.parse(localStorage.getItem('lateCircleDailyHistory') || '{}');
-              return Object.keys(dh).slice(-60).reduce((acc, k) => {
-                const d = dh[k];
-                if (!d) return acc;
-                return acc + (d.food ? 1 : 0) + (d.walk ? 1 : 0) + (d.sleep ? 1 : 0) + (d.calm ? 1 : 0);
-              }, 0);
-            })()} times this month. I saw all of them. Even the ones you forgot.
-          </p>
-          <button
-            onClick={handleOpenSoftPlace}
-            className="w-full bg-[#4A2C35] text-white py-3 rounded-full font-bold active:scale-95 shadow-[0_8px_20px_-4px_rgba(74,44,53,0.2)] text-sm"
-          >
-            Open My Soft Place →
-          </button>
-        </div>
-      )}
       {/* Period start button — moved up so she can find it when late */}
       <button onClick={() => setShowConfirm(true)} className="w-full max-w-sm bg-[#4A2C35] text-white py-3.5 rounded-full text-sm font-bold shadow-[0_8px_20px_-4px_rgba(74,44,53,0.25)] active:scale-95 transition-transform mb-6 mt-2">
         My period started today 🌸
@@ -433,8 +377,6 @@ export default function CyclePage() {
           <div className="bg-white border border-[#FFB3C1]/30 p-3 rounded-xl text-xs text-[#4A2C35]/80 w-full animate-slide-up shadow-[0_8px_24px_rgba(74,44,53,0.06)] leading-relaxed mt-2">{tagMessage}</div>
         )}
       </div>
-
-
 
       {/* 5 Girls Card */}
       <div className="w-full max-w-sm bg-white border border-[#4A2C35]/5 rounded-3xl p-5 shadow-[0_16px_32px_-12px_rgba(74,44,53,0.1)] mb-4">
@@ -620,11 +562,6 @@ export default function CyclePage() {
           </div>
         );
       })()}
-
-      {/* SOFT PLACE MODAL */}
-      {showLetter && letterData && (
-        <SoftPlace data={letterData} onClose={() => setShowLetter(false)} />
-      )}
 
     </main>
   );

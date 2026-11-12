@@ -467,10 +467,16 @@ function HomeContent() {
   if (!isLoaded) return <div className="h-screen w-full bg-[#FFF0F3]" />;
 
   const getBigButtonText = () => {
-    if (closedCount === 4) {
-      if (nowHour >= 19) return "I'm done for today 💚";
-      return "All 4 closed. Come back tonight 🌙";
+    const focusClosedCount = girl.focus.filter(f => circles[f as keyof typeof circles]).length;
+    const isWon = focusClosedCount >= 2;
+    
+    if (isWon) {
+      if (closedCount === 4) {
+        return nowHour >= 19 ? "I'm done for today 💚" : "All 4 closed. Come back tonight 🌙";
+      }
+      return "You won today. Rest now 💚";
     }
+
     if (closedCount === 0) return "Start my circles ➔";
     if (closedCount === 3) return "Finish my last circle ➔";
     return "Close my next circle ➔";
@@ -671,14 +677,34 @@ function HomeContent() {
             You don't have to do everything today. <br/> Just 2. I will carry the rest.
           </p>
         ) : (
-          <>
-            <p className="text-[#4A2C35] text-sm font-medium mb-1">
-              Today's focus: <span className="capitalize font-bold">{girl.focus.join(' + ')}</span>
-            </p>
-            <p className="text-[#4A2C35]/50 text-xs">
-              Close 2 to win today. 4 is a full circle 💚
-            </p>
-          </>
+          (() => {
+            const focusClosedCount = girl.focus.filter(f => circles[f as keyof typeof circles]).length;
+            const isWon = focusClosedCount >= 2;
+
+            if (isWon) {
+              return (
+                <>
+                  <p className="text-[#4A2C35] text-sm font-bold mb-1">
+                    You showed up today. 💚
+                  </p>
+                  <p className="text-[#4A2C35]/50 text-xs">
+                    {closedCount === 4 ? "That's a full circle. Amazing." : "You don't have to do more. Rest now."}
+                  </p>
+                </>
+              );
+            }
+
+            return (
+              <>
+                <p className="text-[#4A2C35] text-sm font-medium mb-1">
+                  Today's focus: <span className="capitalize font-bold">{girl.focus.join(' + ')}</span>
+                </p>
+                <p className="text-[#4A2C35]/50 text-xs">
+                  Close 2 to win today. 4 is a full circle 💚
+                </p>
+              </>
+            );
+          })()
         )}
       </div>
 
@@ -837,182 +863,262 @@ function HomeContent() {
 
       {/* CLAIM FLOW MODAL */}
       {showClaimFlow && (
-        <div className="fixed inset-0 bg-[#FFF0F3] z-200 flex flex-col items-center justify-center p-6 pb-24 animate-fade-in text-center overflow-y-auto">
+        <div className="fixed inset-0 bg-[#FFF0F3] z-200 flex flex-col items-center justify-center p-6 animate-fade-in text-center overflow-hidden">
           
-          {/* STEP 1: Proof */}
-          {claimStep === 1 && (
-            <div className="animate-fade-in-slow w-full max-w-sm flex flex-col items-center text-center">
-              <div className="w-20 h-20 rounded-full bg-[#FFB3C1]/20 flex items-center justify-center mb-8 animate-pop-in-slow">
-                <span className="text-4xl">✨</span>
+          {/* THE CELEBRATION BACKGROUND */}
+          <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+            <div className="absolute w-64 h-64 bg-[#FFB3C1]/30 rounded-full blur-3xl animate-pop-in-slow" />
+            
+            <div className="relative z-10 flex flex-col items-center px-4 mb-32">
+              <div className="w-20 h-20 rounded-full bg-[#FFB3C1]/40 flex items-center justify-center mb-6 animate-pop-in shadow-[0_0_40px_rgba(255,143,163,0.3)]">
+                <span className="text-4xl animate-pulse">✨</span>
               </div>
               
-              <h1 className="text-xl font-bold text-[#8A2C3E] mb-4 leading-snug px-4">
+              <h1 className="text-2xl font-bold text-[#8A2C3E] mb-4 leading-snug">
                 Claimed, Fine Girl. ✨
               </h1>
-              <p className="text-sm text-[#4A2C35]/80 mb-10 font-medium px-4 leading-relaxed">
+              <p className="text-[15px] text-[#4A2C35]/80 font-medium leading-relaxed max-w-70">
                 {claimDayText}
               </p>
-              
-              <button 
-                onClick={() => setClaimStep(2)} 
-                className="w-full bg-[#FF8FA3] text-white py-3.5 rounded-full font-bold shadow-[0_8px_20px_rgba(255,143,163,0.3)] active:scale-95 text-sm"
-              >
-                Take this worry from me 🤍
-              </button>
             </div>
-          )}
+          </div>
 
-          {/* STEP 2: Worry Float Away */}
-          {claimStep === 2 && (() => {
-            const recentTags = typeof window !== 'undefined'
-              ? JSON.parse(localStorage.getItem('lateCircleTags') || '[]')
-              : [];
-            const worry = getWorryForTags(recentTags);
-
-            return (
-              <div className="animate-fade-in-slow w-full max-w-sm flex flex-col items-center text-center">
-                <h1 className="text-xl font-bold text-[#8A2C3E] mb-2">
-                  {worryReleasing ? "Give it to me." : "What is on your mind?"}
-                </h1>
-                <p className="text-sm text-[#4A2C35]/60 mb-10">
-                  {worryReleasing ? "I am carrying it now." : "Let it float away."}
-                </p>
-
-                <div className="relative w-full h-48 flex items-center justify-center mb-8">
-                  {!worryReleased && (
-                    <div
-                      className={`absolute max-w-70 px-6 py-4 rounded-full bg-[#FFF0F3] border border-[#FFB3C1]/40 shadow-[0_8px_30px_rgba(255,143,163,0.15)] transition-all ease-in-out ${
-                        worryReleasing
-                          ? 'opacity-0 -translate-y-24 scale-50 blur-md'
-                          : 'opacity-100 translate-y-0 scale-100'
-                      }`}
-                      style={{ transitionDuration: '2500ms' }}
+          {/* THE BOTTOM CARD (The Pop-up) */}
+          <div className="absolute bottom-10 w-full max-w-sm px-6 animate-slide-up">
+            <div className="bg-white rounded-3xl p-6 shadow-[0_24px_48px_-16px_rgba(74,44,53,0.25)] border border-[#4A2C35]/5">
+              
+              {/* STEP 2: The Ask */}
+              {claimStep === 1 && (
+                <div className="flex flex-col items-center text-center">
+                  <h2 className="text-lg font-bold text-[#4A2C35] mb-6">
+                    Is the worry still on your mind?
+                  </h2>
+                  <div className="flex flex-col gap-3 w-full">
+                    <button 
+                      onClick={() => setClaimStep(2)} 
+                      className="w-full bg-[#FF8FA3] text-white py-3.5 rounded-full font-bold shadow-[0_8px_20px_rgba(255,143,163,0.3)] active:scale-95 text-sm"
                     >
-                      <p className="text-[13px] text-[#8A2C3E] font-medium italic leading-snug">
-                        "{worry.worry}"
-                      </p>
-                    </div>
-                  )}
-
-                  {worryReleased && (
-                    <div className="flex gap-2 animate-fade-in">
-                      <div className="w-1.5 h-1.5 rounded-full bg-[#FFB3C1]/60 animate-pulse" />
-                      <div className="w-2 h-2 rounded-full bg-[#FFB3C1]/40 animate-pulse delay-150" />
-                      <div className="w-1.5 h-1.5 rounded-full bg-[#FFB3C1]/60 animate-pulse delay-300" />
-                    </div>
-                  )}
+                      Yes, I am still worried 🤍
+                    </button>
+                    <button 
+                      onClick={() => setClaimStep(3)} 
+                      className="w-full bg-[#FFF0F3] border border-[#4A2C35]/10 text-[#4A2C35]/70 py-3.5 rounded-full font-bold active:scale-95 transition-all text-sm"
+                    >
+                      No, I feel better 🌸
+                    </button>
+                  </div>
                 </div>
+              )}
 
-                {!worryReleasing && (
-                  <button
-                    onClick={() => {
-                      setWorryReleasing(true);
-                      setTimeout(() => {
-                        setWorryReleased(true);
-                        logEvent('claim_worry_released', { worry: worry.worry });
-                        setTimeout(() => {
-                          setClaimStep(3);
-                        }, 2500);
-                      }, 2500);
-                    }}
-                    className="w-full bg-[#FF8FA3] text-white py-3.5 rounded-full font-bold shadow-[0_8px_20px_rgba(255,143,163,0.3)] active:scale-95 text-sm"
-                  >
-                    Take this worry from me 🤍
-                  </button>
-                )}
+              {/* STEP 3: The Float (If she said Yes) */}
+              {claimStep === 2 && (() => {
+                const recentTags = typeof window !== 'undefined'
+                  ? JSON.parse(localStorage.getItem('lateCircleTags') || '[]')
+                  : [];
+                const worry = getWorryForTags(recentTags);
 
-                {worryReleased && (
-                  <p className="text-[15px] text-[#4A2C35]/80 font-medium leading-relaxed animate-fade-in px-4">
-                    {worry.oviRelease}
+                return (
+                  <div className="flex flex-col items-center text-center">
+                    <h2 className="text-lg font-bold text-[#4A2C35] mb-1">
+                      {worryReleasing ? "Give it to me." : "Let it float away."}
+                    </h2>
+                    <p className="text-xs text-[#4A2C35]/60 mb-6">
+                      {worryReleasing ? "I am carrying it now." : "Watch it leave your body."}
+                    </p>
+
+                    <div className="relative w-full h-24 flex items-center justify-center mb-6">
+                      {!worryReleased && (
+                        <div
+                          className={`absolute max-w-60 px-5 py-3 rounded-full bg-[#FFF0F3] border border-[#FFB3C1]/40 transition-all ease-in-out ${
+                            worryReleasing
+                              ? 'opacity-0 -translate-y-16 scale-50 blur-md'
+                              : 'opacity-100 translate-y-0 scale-100'
+                          }`}
+                          style={{ transitionDuration: '2500ms' }}
+                        >
+                          <p className="text-[12px] text-[#8A2C3E] font-medium italic leading-snug">
+                            "{worry.worry}"
+                          </p>
+                        </div>
+                      )}
+
+                      {worryReleased && (
+                        <div className="flex gap-2 animate-fade-in">
+                          <div className="w-1.5 h-1.5 rounded-full bg-[#FFB3C1]/60 animate-pulse" />
+                          <div className="w-2 h-2 rounded-full bg-[#FFB3C1]/40 animate-pulse delay-150" />
+                          <div className="w-1.5 h-1.5 rounded-full bg-[#FFB3C1]/60 animate-pulse delay-300" />
+                        </div>
+                      )}
+                    </div>
+
+                    {!worryReleasing && (
+                      <button
+                        onClick={() => {
+                          setWorryReleasing(true);
+                          setTimeout(() => {
+                            setWorryReleased(true);
+                            setTimeout(() => {
+                              setClaimStep(3);
+                            }, 2500);
+                          }, 2500);
+                        }}
+                        className="w-full bg-[#FF8FA3] text-white py-3.5 rounded-full font-bold shadow-[0_8px_20px_rgba(255,143,163,0.3)] active:scale-95 text-sm"
+                      >
+                        Let it float away 🤍
+                      </button>
+                    )}
+
+                    {worryReleased && (
+                      <p className="text-sm text-[#4A2C35]/80 font-medium leading-relaxed animate-fade-in">
+                        {worry.oviRelease}
+                      </p>
+                    )}
+                  </div>
+                );
+              })()}
+
+              {/* STEP 3: The Action (If she said No, or finished floating) */}
+              {claimStep === 3 && (
+                <div className="flex flex-col items-center text-center">
+                  <h2 className="text-lg font-bold text-[#8A2C3E] mb-1">
+                    You have the power today.
+                  </h2>
+                  <p className="text-xs text-[#4A2C35]/60 mb-5 px-2">
+                    Which one feels lightest to do right now? Or just rest.
                   </p>
-                )}
-              </div>
-            );
-          })()}
 
-          {/* STEP 3: Ovi Suggests Calm */}
-          {claimStep === 3 && (
-            <div className="animate-fade-in-slow w-full max-w-sm flex flex-col items-center text-center">
-              <div className="w-20 h-20 rounded-full bg-[#9CAF88]/15 flex items-center justify-center mb-6 animate-pop-in-slow">
-                <span className="text-4xl">🌿</span>
-              </div>
-              
-              <h1 className="text-xl font-bold text-[#8A2C3E] mb-3">
-                I am holding the worry now.
-              </h1>
-              <p className="text-sm text-[#4A2C35]/70 mb-8 px-4 leading-relaxed">
-                You can rest. Let's take 90 seconds to help your body relax while we wait.
-              </p>
+                  <div className="flex flex-col gap-2 w-full">
+                    {closedCount === 4 ? (
+                      <p className="text-sm text-[#4A2C35]/80 font-medium mb-2">
+                        You've already done enough today. Just rest.
+                      </p>
+                    ) : (
+                      <>
+                        {!circles.food && (
+                          <button 
+                            onClick={() => {
+                              setShowClaimFlow(false);
+                              setActiveModal('food');
+                              setShowFoodDetails(false);
+                              setShowFoodLog(false);
+                            }} 
+                            className="w-full bg-[#4A2C35] text-white py-3 rounded-xl font-bold active:scale-95 text-sm shadow-md flex items-center justify-center gap-2"
+                          >
+                            <span className="text-lg">🍲</span> Close Food
+                          </button>
+                        )}
 
-              <div className="w-full bg-white border border-[#9CAF88]/30 rounded-2xl p-4 mb-4 shadow-sm">
-                <p className="text-[10px] font-bold text-[#9CAF88] uppercase tracking-widest mb-2">Ovi suggests</p>
-                <p className="text-sm text-[#4A2C35] font-medium leading-relaxed">
-                  Let's do 90 seconds of Calm together.
-                </p>
-              </div>
-              
-              <button 
-                onClick={() => {
-                  setShowClaimFlow(false);
-                  setClaimStep(1);
-                  setWorryReleasing(false);
-                  setWorryReleased(false);
-                  setActiveModal('calm');
-                  setCalmView('menu');
-                  logEvent('claim_redirected_to_calm', {});
-                }} 
-                className="w-full bg-[#4A2C35] text-white py-3.5 rounded-full font-bold shadow-lg active:scale-95 text-sm mb-3"
-              >
-                Okay, let's do 90s of Calm 🤍
-              </button>
+                        {circles.food && !circles.sleep && (
+                          <button 
+                            onClick={() => {
+                              setShowClaimFlow(false);
+                              setActiveModal('sleep');
+                            }} 
+                            className="w-full bg-[#4A2C35] text-white py-3 rounded-xl font-bold active:scale-95 text-sm shadow-md flex items-center justify-center gap-2"
+                          >
+                            <span className="text-lg">🌙</span> Close Sleep
+                          </button>
+                        )}
 
-              <button 
-                onClick={() => {
-                  setShowClaimFlow(false);
-                  setClaimStep(1);
-                  setWorryReleasing(false);
-                  setWorryReleased(false);
-                  logEvent('claim_calm_declined', {});
-                }} 
-                className="w-full bg-white border border-[#4A2C35]/15 text-[#4A2C35]/70 py-3.5 rounded-full font-bold active:scale-95 transition-all text-sm shadow-sm"
-              >
-                Not now, Ovi
-              </button>
+                        {circles.food && circles.sleep && !circles.walk && (
+                          <button 
+                            onClick={() => {
+                              saveState({ walk: true });
+                              setShowClaimFlow(false);
+                              setShowWinCelebration(true);
+                              setTimeout(() => setShowWinCelebration(false), 2500);
+                              logEvent('circle_closed', { circle: 'walk', day: cycleData.currentDay });
+                            }} 
+                            className="w-full bg-[#4A2C35] text-white py-3 rounded-xl font-bold active:scale-95 text-sm shadow-md flex items-center justify-center gap-2"
+                          >
+                            <span className="text-lg">👟</span> Close Walk
+                          </button>
+                        )}
+
+                        {circles.food && circles.sleep && circles.walk && !circles.calm && (
+                          <button 
+                            onClick={() => {
+                              setShowClaimFlow(false);
+                              setActiveModal('calm');
+                              setCalmView('menu');
+                            }} 
+                            className="w-full bg-[#4A2C35] text-white py-3 rounded-xl font-bold active:scale-95 text-sm shadow-md flex items-center justify-center gap-2"
+                          >
+                            <span className="text-lg">🧠</span> Close Calm
+                          </button>
+                        )}
+                      </>
+                    )}
+
+                    <button 
+                      onClick={() => setShowClaimFlow(false)} 
+                      className="w-full bg-[#FFF0F3] text-[#4A2C35]/60 border border-transparent py-2.5 rounded-xl font-medium active:scale-95 text-xs mt-1"
+                    >
+                      I just want to rest 🤍
+                    </button>
+                  </div>
+                </div>
+              )}
+
             </div>
-          )}
+          </div>
         </div>
       )}
 
       {showActionSheet && (
         <div className="fixed inset-0 bg-[#4A2C35]/20 backdrop-blur-sm z-100 flex items-center justify-center p-6 animate-fade-in" onClick={() => setShowActionSheet(false)}>
           <div className="w-full max-w-sm bg-white rounded-3xl p-6 shadow-[0_24px_48px_-16px_rgba(74,44,53,0.25)] animate-slide-up" onClick={(e) => e.stopPropagation()}>
-            <div className="flex justify-between items-center mb-6">
+            <div className="flex justify-between items-center mb-2">
               <h3 className="text-xl font-bold text-[#4A2C35]">What did you do?</h3>
               <button onClick={() => setShowActionSheet(false)} className="w-8 h-8 rounded-full bg-[#FFF0F3] flex items-center justify-center text-[#4A2C35]/60 font-bold">✕</button>
             </div>
             
+            {/* The "Why" text */}
+            <p className="text-[11px] text-[#4A2C35]/50 italic mb-5 leading-relaxed">
+              Today's focus is <span className="capitalize font-bold text-[#4A2C35]/70">{girl.focus.join(' + ')}</span> because your body is in its <span className="capitalize font-bold text-[#4A2C35]/70">{girl.name}</span> days.
+            </p>
+            
             <div className="flex flex-col gap-3">
               
+              {/* FOOD */}
               <div className={`flex flex-col p-4 rounded-2xl border transition-all ${circles.food ? 'bg-[#9CAF88]/10 border-[#9CAF88]/30' : 'bg-white border-[#4A2C35]/5 shadow-sm'}`}>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4">
                     <div className="w-12 h-12 rounded-xl bg-[#FFF0F3] flex items-center justify-center text-xl">🍲</div>
                     <div className="text-left">
-                      <h3 className="font-bold text-[#4A2C35]">Food</h3>
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-bold text-[#4A2C35]">Food</h3>
+                        {girl.focus.includes('food') && <span className="text-[9px] font-bold text-[#FF8FA3] bg-[#FF8FA3]/10 px-2 py-0.5 rounded-full">Priority ✨</span>}
+                      </div>
                       <p className="text-[10px] text-[#4A2C35]/50">{circles.food ? 'Completed 💚' : 'Eat balanced, before 9pm'}</p>
                     </div>
                   </div>
                   {!circles.food && (
-                    <button onClick={() => { setShowActionSheet(false); setActiveModal('food'); setShowFoodDetails(false); setShowFoodLog(false); }} className="text-[#4A2C35]/30 text-lg">➔</button>
+                    <button 
+                      onClick={() => { 
+                        saveState({ food: true }); 
+                        setShowActionSheet(false); 
+                        setShowWinCelebration(true); 
+                        setTimeout(() => setShowWinCelebration(false), 2500); 
+                        logEvent('circle_closed', { circle: 'food', day: cycleData.currentDay }); 
+                      }} 
+                      className="bg-[#9CAF88] text-white px-4 py-2 rounded-xl text-xs font-bold active:scale-95"
+                    >
+                      Yes
+                    </button>
                   )}
                 </div>
               </div>
 
+              {/* WALK */}
               <div className={`flex flex-col p-4 rounded-2xl border transition-all ${isWalkDone ? 'bg-[#9CAF88]/10 border-[#9CAF88]/30' : 'bg-white border-[#4A2C35]/5 shadow-sm'}`}>
                 <div className="flex items-center gap-4">
                   <div className="w-12 h-12 rounded-xl bg-[#E8F0E0] flex items-center justify-center text-xl">👟</div>
                   <div className="text-left flex-1">
-                    <h3 className="font-bold text-[#4A2C35]">Walk</h3>
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-bold text-[#4A2C35]">Walk</h3>
+                      {girl.focus.includes('walk') && <span className="text-[9px] font-bold text-[#FF8FA3] bg-[#FF8FA3]/10 px-2 py-0.5 rounded-full">Priority ✨</span>}
+                    </div>
                     <p className="text-[10px] text-[#4A2C35]/50">{isWalkDone ? 'Completed 💚' : 'Did you move 20 mins?'}</p>
                   </div>
                   {!isWalkDone && (
@@ -1021,11 +1127,15 @@ function HomeContent() {
                 </div>
               </div>
 
+              {/* SLEEP */}
               <div className={`flex flex-col p-4 rounded-2xl border transition-all ${circles.sleep ? 'bg-[#9CAF88]/10 border-[#9CAF88]/30' : 'bg-white border-[#4A2C35]/5 shadow-sm'}`}>
                 <div className="flex items-center gap-4">
                   <div className="w-12 h-12 rounded-xl bg-[#FFF0F3] flex items-center justify-center text-xl">🌙</div>
                   <div className="text-left flex-1">
-                    <h3 className="font-bold text-[#4A2C35]">Sleep</h3>
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-bold text-[#4A2C35]">Sleep</h3>
+                      {girl.focus.includes('sleep') && <span className="text-[9px] font-bold text-[#FF8FA3] bg-[#FF8FA3]/10 px-2 py-0.5 rounded-full">Priority ✨</span>}
+                    </div>
                     <p className="text-[10px] text-[#4A2C35]/50">{circles.sleep ? 'Completed 💚' : 'In bed by 10:30pm?'}</p>
                   </div>
                   {!circles.sleep && (
@@ -1034,11 +1144,15 @@ function HomeContent() {
                 </div>
               </div>
 
+              {/* CALM */}
               <div className={`flex flex-col p-4 rounded-2xl border transition-all ${circles.calm ? 'bg-[#9CAF88]/10 border-[#9CAF88]/30' : 'bg-white border-[#4A2C35]/5 shadow-sm'}`}>
                 <div className="flex items-center gap-4">
                   <div className="w-12 h-12 rounded-xl bg-[#EDE8FF] flex items-center justify-center text-xl">🧠</div>
                   <div className="text-left flex-1">
-                    <h3 className="font-bold text-[#4A2C35]">Calm</h3>
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-bold text-[#4A2C35]">Calm</h3>
+                      {girl.focus.includes('calm') && <span className="text-[9px] font-bold text-[#FF8FA3] bg-[#FF8FA3]/10 px-2 py-0.5 rounded-full">Priority ✨</span>}
+                    </div>
                     <p className="text-[10px] text-[#4A2C35]/50">{circles.calm ? 'Completed 💚' : 'Did 90 secs of calm?'}</p>
                   </div>
                   {!circles.calm && (
@@ -1056,75 +1170,35 @@ function HomeContent() {
         <div className="absolute inset-0 bg-[#4A2C35]/20 backdrop-blur-sm flex items-center justify-center z-50 p-6">
           <div className="w-full max-w-sm bg-white rounded-3xl p-6 text-[#4A2C35] shadow-2xl animate-slide-up border border-[#4A2C35]/5">
             {activeModal === 'food' && (
-              <div className="flex flex-col max-h-[75vh]">
-                {!showFoodLog ? (
-                  <>
-                    <h3 className="text-lg font-bold mb-4 text-[#4A2C35] leading-snug">Did you eat balanced plates today with Nigerian food? No food after 9pm?</h3>
-                    <div className="bg-[#FFF0F3] border border-[#FFB3C1]/30 rounded-2xl p-4 mb-4">
-                      <ul className="text-[13px] text-[#4A2C35]/80 space-y-1.5">
-                        <li>• Rice + stew + protein + vegetable</li>
-                        <li>• Eba / fufu + soup + protein</li>
-                        <li>• Yam / beans + vegetable + protein</li>
-                        <li>• Indomie + egg + vegetable</li>
-                      </ul>
-                    </div>
-                    <p className="text-[11px] text-[#9CAF88] font-semibold mb-5">Rule: Last food before 9pm</p>
-                    <div className="flex gap-3 mt-auto">
-                      <button onClick={() => { saveState({ food: true }); setActiveModal(null); setShowWinCelebration(true); setTimeout(() => setShowWinCelebration(false), 2500); logEvent('circle_closed', { circle: 'food', day: cycleData.currentDay }); }} className="flex-1 bg-[#9CAF88] text-white py-3 rounded-xl font-bold active:scale-95">Yes, I did</button>
-                      <button onClick={() => setShowFoodLog(true)} className="flex-1 border border-[#4A2C35]/15 py-3 rounded-xl font-medium active:scale-95">No, I didn't</button>
-                    </div>
-                  </>
-                ) : !showFoodDetails ? (
-                  <>
-                    <h3 className="text-xl font-bold mb-1 text-[#4A2C35]">What did you eat?</h3>
-                    <p className="text-xs text-[#4A2C35]/60 mb-4">
-                      No pressure. Just tell me what you had, and I will help you adjust it.
-                    </p>
-
-                    <input 
-                      type="text" 
-                      placeholder="Search e.g. Bread, Eba..." 
-                      value={searchQuery} 
-                      onChange={(e) => setSearchQuery(e.target.value)} 
-                      className="w-full bg-[#FFF0F3] border border-[#4A2C35]/10 text-[#4A2C35] p-4 rounded-xl mb-4 focus:outline-none focus:border-[#FF8FA3]" 
-                    />
-                    
-                    <div className="overflow-y-auto flex-1 flex flex-col gap-2 mb-4 pr-2">
-                      {filteredFoods.map((food) => {
-                        const isSelected = selectedFoods.some(f => f.id === food.id);
-                        return (
-                          <button key={food.id} onClick={() => toggleFoodSelection(food)} className={`p-4 rounded-xl text-left border flex justify-between items-center transition-all ${isSelected ? 'border-[#9CAF88] bg-[#9CAF88]/10' : 'border-[#4A2C35]/5 bg-[#FFF0F3]/50'}`}>
-                            <p className="font-semibold text-[#4A2C35]">{food.name}</p>
-                            {isSelected && <span className="text-[#9CAF88] text-xl">✓</span>}
-                          </button>
-                        );
-                      })}
-                    </div>
-                    
-                    <div className="flex gap-3 mt-auto">
-                      <button onClick={() => setShowFoodDetails(true)} disabled={selectedFoods.length === 0} className={`flex-1 py-3 rounded-xl font-bold ${selectedFoods.length > 0 ? 'bg-[#9CAF88] text-white' : 'bg-[#9CAF88]/30 text-white/50'}`}>Next</button>
-                      <button onClick={() => { setActiveModal(null); setShowActionSheet(true); }} className="px-6 border border-[#4A2C35]/15 py-3 rounded-xl font-medium opacity-70">← Back</button>                   
-                   </div>
-                  </>
-                ) : (
-                  <>
-                    <h3 className="text-lg font-bold mb-3 text-[#4A2C35]">Confirm your plate</h3>
-                    <div className="bg-[#FFF0F3] p-4 rounded-xl border border-[#4A2C35]/5 mb-4">
-                      <p className="text-sm font-bold mb-2 text-[#4A2C35]">{selectedFoods.map(f => f.name).join(' + ')}</p>
-                      <p className="text-xs text-[#4A2C35]/60 mb-4">{plateFix}</p>
-                      {plateScore !== 'Green' ? (
-                        <div className="flex gap-2 mb-4">
-                          <button onClick={() => logFood(true)} className="flex-1 py-3 rounded-xl font-bold bg-[#9CAF88] text-white text-xs">I added it (Make it Green)</button>
-                          <button onClick={() => logFood(false)} className="flex-1 py-3 rounded-xl font-bold bg-white text-[#4A2C35] border border-[#4A2C35]/10 text-xs">I will eat it like this</button>
-                        </div>
-                      ) : (
-                        <button onClick={() => logFood(true)} className="w-full py-3 rounded-xl font-bold bg-[#9CAF88] text-white text-sm mb-4">Close it Green</button>
-                      )}
-                      <button onClick={() => setShowFoodDetails(false)} className="w-full text-[10px] text-[#4A2C35]/40 underline">Back to search</button>
-                    </div>
-                  </>
-                )}
-              </div>
+              <>
+                <h3 className="text-lg font-bold mb-3 text-[#4A2C35] leading-snug">Did you eat a balanced plate today before 9pm?</h3>
+                <div className="bg-[#FFF0F3] border border-[#FFB3C1]/30 rounded-2xl p-4 mb-5">
+                  <p className="text-xs text-[#4A2C35]/80 italic">"{oviGists[girl.id as PhaseId].food}"</p>
+                </div>
+                <p className="text-[11px] text-[#9CAF88] font-semibold mb-5">Rule: Last food before 9pm</p>
+                
+                <div className="flex gap-3 mt-auto">
+                  <button 
+                    onClick={() => { 
+                      saveState({ food: true }); 
+                      setActiveModal(null); 
+                      setShowWinCelebration(true); 
+                      setTimeout(() => setShowWinCelebration(false), 2500); 
+                      logEvent('circle_closed', { circle: 'food', day: cycleData.currentDay }); 
+                    }} 
+                    className="flex-1 bg-[#9CAF88] text-white py-3 rounded-xl font-bold active:scale-95"
+                  >
+                    Yes, I did
+                  </button>
+                  
+                  <button 
+                    onClick={() => setActiveModal(null)} 
+                    className="flex-1 border border-[#4A2C35]/15 py-3 rounded-xl font-medium active:scale-95"
+                  >
+                    Not yet
+                  </button>
+                </div>
+              </>
             )}
             {activeModal === 'walk' && (
               <>

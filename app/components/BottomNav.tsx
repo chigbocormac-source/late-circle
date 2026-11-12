@@ -2,59 +2,42 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useState, useEffect } from 'react';
 
 export default function BottomNav() {
   const pathname = usePathname();
-  const [mounted, setMounted] = useState(false);
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  const tabs = [
+    { name: 'Today', path: '/today', icon: '🏠' },
+    { name: 'Cycle', path: '/cycle', icon: '🌙' },
+    { name: 'Wins', path: '/wins', icon: '🏆' },
+    { name: 'Care', path: '/care', icon: '🤍' },
+    { name: 'Ovi', path: '/chat', icon: '💬' },
+  ];
 
   return (
-    <div className="fixed bottom-6 left-0 right-0 mx-auto w-[90%] max-w-sm z-50">
-      <div className="bg-white/95 backdrop-blur-md border border-[#4A2C35]/5 flex justify-between items-center px-2 py-2 rounded-full shadow-[0_8px_30px_rgba(74,44,53,0.12)]">
-        
-        {/* TODAY TAB */}
-        <Link 
-          href="/today" 
-          className={`flex items-center gap-2 px-5 py-2.5 rounded-full transition-all duration-300 ${
-            mounted && pathname === '/today' 
-              ? 'bg-[#4A2C35] text-white shadow-sm' 
-              : 'text-[#4A2C35]/40 hover:text-[#4A2C35]/70'
-          }`}
-        >
-          <span className="text-[16px]">📖</span>
-          {mounted && pathname === '/today' && <span className="text-sm font-bold">Today</span>}
-        </Link>
-
-        {/* CYCLE TAB */}
-        <Link 
-          href="/cycle" 
-          className={`flex items-center gap-2 px-5 py-2.5 rounded-full transition-all duration-300 ${
-            mounted && pathname === '/cycle' 
-              ? 'bg-[#4A2C35] text-white shadow-sm' 
-              : 'text-[#4A2C35]/40 hover:text-[#4A2C35]/70'
-          }`}
-        >
-          <span className="text-[16px]">🌙</span>
-          {mounted && pathname === '/cycle' && <span className="text-sm font-bold">Cycle</span>}
-        </Link>
-
-        {/* MY WINS TAB */}
-        <Link 
-          href="/wins" 
-          className={`flex items-center gap-2 px-5 py-2.5 rounded-full transition-all duration-300 ${
-            mounted && pathname === '/wins' 
-              ? 'bg-[#4A2C35] text-white shadow-sm' 
-              : 'text-[#4A2C35]/40 hover:text-[#4A2C35]/70'
-          }`}
-        >
-          <span className="text-[16px]">🏆</span>
-          {mounted && pathname === '/wins' && <span className="text-sm font-bold">My Wins</span>}
-        </Link>
-
+    <div className="print:hidden fixed bottom-0 left-0 right-0 z-50 flex justify-center pb-4 px-4 pointer-events-none">
+      <div className="bg-white/90 backdrop-blur-lg border border-[#4A2C35]/5 shadow-[0_8px_32px_rgba(74,44,53,0.08)] rounded-full px-2 py-2 flex items-center gap-1 sm:gap-4 pointer-events-auto">
+        {tabs.map((tab) => {
+          const isActive = pathname === tab.path;
+          return (
+            <Link
+              key={tab.name}
+              href={tab.path}
+              className={`flex items-center gap-2 px-3 sm:px-5 py-2.5 rounded-full transition-all duration-300 ${
+                isActive
+                  ? 'bg-[#4A2C35] text-white shadow-md'
+                  : 'text-[#4A2C35]/40 hover:bg-[#FFF0F3]'
+              }`}
+            >
+              <span className="text-lg leading-none">{tab.icon}</span>
+              {isActive && (
+                <span className="text-[11px] font-bold tracking-wide">
+                  {tab.name}
+                </span>
+              )}
+            </Link>
+          );
+        })}
       </div>
     </div>
   );

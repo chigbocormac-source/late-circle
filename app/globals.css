@@ -48,3 +48,37 @@
 .animate-glow {
   animation: glow-pulse 2s infinite;
 }
+
+/* PRINT STYLES - For Doctor PDF */
+@media print {
+  /* Remove browser headers/footers (date, URL, page numbers) */
+  @page {
+    margin: 0;
+    size: A4;
+  }
+
+  /* Force background colors to print (like the green and pink boxes) */
+  body {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Hide navigation and fixed buttons */
+  .print\:hidden {
+    display: none !important;
+  }
+
+  /* Apply the margin inside the PDF itself instead of on the page */
+  main {
+    padding: 10mm !important;
+    background: white !important;
+  }
+
+  /* Force everything to fit on one page */
+  .bg-white {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+}
