@@ -2,33 +2,28 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { supabase } from '../../supabase';
 
 export default function YouPlace() {
   const router = useRouter();
   const [step, setStep] = useState(1);
   const [isLoaded, setIsLoaded] = useState(false);
 
-  // The 5 Steps Data
   const [data, setData] = useState({
-    // Step 1: Periods
     lastPeriod: '',
     cycleLength: '',
     bleedDays: '',
-    // Step 2: Bleeding & Pain
     flow: '',
     clots: '',
     painLevel: 5,
     painWhere: [] as string[],
     spotting: '',
-    // Step 3: Body Signs
     signs: [] as string[],
     signFrequency: '',
-    // Step 4: The Sensitive Stuff
     meds: [] as string[],
     medDate: '',
     pregnancyHistory: '',
     pregnancyDate: '',
-    // Step 5: Life & Family
     weight: '',
     stress: [] as string[],
     family: '',
@@ -54,9 +49,43 @@ export default function YouPlace() {
     setIsLoaded(true);
   }, []);
 
+  // Helper to sync to Supabase
+  const syncToSupabase = (currentData: typeof data) => {
+    const userId = localStorage.getItem('lateCircleUserId');
+    if (!userId) return;
+
+    supabase.from('you_place').upsert([{
+      user_id: userId,
+      last_period: currentData.lastPeriod || null,
+      cycle_length: currentData.cycleLength,
+      bleed_days: currentData.bleedDays,
+      flow: currentData.flow,
+      clots: currentData.clots,
+      pain_level: currentData.painLevel,
+      pain_where: currentData.painWhere,
+      spotting: currentData.spotting,
+      signs: currentData.signs,
+      sign_frequency: currentData.signFrequency,
+      meds: currentData.meds,
+      med_date: currentData.medDate || null,
+      pregnancy_history: currentData.pregnancyHistory,
+      pregnancy_date: currentData.pregnancyDate || null,
+      weight: currentData.weight,
+      stress: currentData.stress,
+      family: currentData.family,
+      sexually_active: currentData.sexuallyActive,
+      test_result: currentData.testResult,
+      doctor_visit: currentData.doctorVisit,
+      doctor_notes: currentData.doctorNotes
+    }], { onConflict: 'user_id' }).then(({ error }) => {
+      if (error) console.error("You place error:", error);
+    });
+  };
+
   const saveAndNext = () => {
     localStorage.setItem('lateCircleYouPlace', JSON.stringify(data));
     localStorage.setItem('lateCircleYouPlaceStep', (step + 1).toString());
+    syncToSupabase(data);
     if (step < 5) {
       setStep(step + 1);
       window.scrollTo(0, 0);
@@ -68,6 +97,7 @@ export default function YouPlace() {
   const saveAndRest = () => {
     localStorage.setItem('lateCircleYouPlace', JSON.stringify(data));
     localStorage.setItem('lateCircleYouPlaceStep', step.toString());
+    syncToSupabase(data);
     router.push('/care');
   };
 
@@ -87,7 +117,6 @@ export default function YouPlace() {
     }
   };
 
-  // THE 60-DAY RED FLAG CALCULATION
   const isMoreThan60Days = () => {
     if (!data.lastPeriod) return false;
     const last = new Date(data.lastPeriod);
@@ -292,7 +321,6 @@ export default function YouPlace() {
               </div>
             )}
 
-            {/* PREGNANCY HISTORY */}
             <div className="border-t border-[#4A2C35]/5 pt-5">
               <label className="text-xs font-bold text-[#4A2C35]/70 block mb-2">Have you been pregnant in the last 6 months?</label>
               <div className="flex flex-col gap-2">
@@ -384,7 +412,6 @@ export default function YouPlace() {
               </div>
             </div>
 
-            {/* PREVIOUS DOCTOR VISIT */}
             <div className="border-t border-[#4A2C35]/5 pt-5">
               <label className="text-xs font-bold text-[#4A2C35]/70 block mb-2">Did you see a doctor about this delay?</label>
               <div className="flex flex-wrap gap-2">
@@ -417,7 +444,6 @@ export default function YouPlace() {
       {/* BUTTONS */}
       <div className="w-full max-w-sm mt-8 flex flex-col gap-3">
         <div className="flex gap-3">
-          {/* Back Button - only shows if not on Step 1 */}
           {step > 1 && (
             <button 
               onClick={goBack}
@@ -427,7 +453,6 @@ export default function YouPlace() {
             </button>
           )}
           
-          {/* Next / Finish Button */}
           <button 
             onClick={saveAndNext}
             className={`${step > 1 ? 'w-2/3' : 'w-full'} bg-[#4A2C35] text-white py-3.5 rounded-full font-bold shadow-lg active:scale-95 text-sm`}
@@ -436,7 +461,6 @@ export default function YouPlace() {
           </button>
         </div>
 
-        {/* Save & Close Button */}
         <button 
           onClick={saveAndRest}
           className="w-full bg-[#FFF0F3] text-[#4A2C35]/60 border border-[#4A2C35]/10 py-3.5 rounded-full font-bold active:scale-95 text-sm"

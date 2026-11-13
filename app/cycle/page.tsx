@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { supabase } from '../supabase';
 import { getCyclePhase, PhaseId, getRealCycleLength } from '../../utils/cycleEngine';
 import { logEvent, localDateKey } from '../../utils/analytics';
 import { generateShareCard, getCaption, blobToDataURL } from '../../utils/shareCard';
@@ -46,7 +47,6 @@ export default function CyclePage() {
   let windowStart = new Date(2000, 0, 1);
   let windowEnd = new Date(2000, 0, 1);
 
-  // Real cycle from onboarding
   average = getRealCycleLength(
     lastPeriodDate || null,
     typeof window !== 'undefined' ? localStorage.getItem('lateCirclePrevPeriod') : null,
@@ -54,7 +54,6 @@ export default function CyclePage() {
   );
   longestCycle = average + 7;
 
-  // Compute average + longest from history
   if (history.length >= 2 && lastPeriodDate) {
     const allDates = [...history, lastPeriodDate].sort((a, b) => new Date(a).getTime() - new Date(b).getTime());
     const diffs: number[] = [];
@@ -124,6 +123,13 @@ export default function CyclePage() {
     localStorage.removeItem('lateCircleDataDate');
     localStorage.removeItem('lateCircleDailyHistory');
     setShowUndo(true);
+
+    // --- SUPABASE SYNC ---
+    const userId = localStorage.getItem('lateCircleUserId');
+    if (userId) {
+      supabase.from('cycles').insert([{ user_id: userId, start_date: todayStr }])
+        .then(({ error }) => { if (error) console.error("Cycle error:", error); });
+    }
   };
 
   const handleUndoReset = () => {

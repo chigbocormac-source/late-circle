@@ -99,6 +99,15 @@ function HomeContent() {
       return;
     }
 
+    // --- SUPABASE USER ID ---
+    let currentUserId = localStorage.getItem('lateCircleUserId');
+    if (!currentUserId) {
+      currentUserId = crypto.randomUUID();
+      localStorage.setItem('lateCircleUserId', currentUserId);
+      supabase.from('profiles').insert([{ id: currentUserId, name: 'Fine Girl' }])
+        .then(({ error }) => { if (error) console.error("Profile error:", error); });
+    }
+
     const savedDate = localStorage.getItem('lateCircleLastPeriod');
     if (savedDate) setLastPeriodDate(savedDate);
 
@@ -309,6 +318,23 @@ function HomeContent() {
     if (keys.length > 60) delete history[keys[0]];
     
     localStorage.setItem('lateCircleDailyHistory', JSON.stringify(history));
+
+    // --- SUPABASE SYNC ---
+    const userId = localStorage.getItem('lateCircleUserId');
+    if (userId) {
+      const tags = JSON.parse(localStorage.getItem('lateCircleTags') || '[]');
+      supabase.from('daily_logs').upsert([{
+        user_id: userId,
+        log_date: today,
+        food: newState.food,
+        walk: newState.walk,
+        sleep: newState.sleep,
+        calm: newState.calm,
+        tags: tags
+      }], { onConflict: 'user_id, log_date' }).then(({ error }) => {
+        if (error) console.error("Daily log error:", error);
+      });
+    }
   };
 
   const completeCircle = (circle: 'food' | 'sleep' | 'calm') => {
