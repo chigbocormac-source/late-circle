@@ -13,12 +13,13 @@ export type EventType =
   | 'hold_me_abandoned'
   | 'claim_started'
   | 'claim_completed'
+  | 'claim_worry_released'
+  | 'claim_redirected_to_calm'
+  | 'claim_calm_declined'
   | 'period_came'
   | 'late_console_action'
   | 'late_console_action_opened'
-  | 'claim_worry_released'
-  | 'claim_redirected_to_calm'
-  | 'claim_calm_declined';   
+  | 'bleeding_logged';   
 
 interface Event {
   type: EventType;

@@ -1,65 +1,173 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { getOviReply, ChatState } from '@/utils/chatEngine';
 
-export default function ChatPage() {
-  const [showToast, setShowToast] = useState(false);
+type Message = {
+  id: string;
+  role: 'user' | 'ovi';
+  text: string;
+  isEmergency?: boolean;
+  chips?: string[];
+};
 
-  const handleInputTap = () => {
-    setShowToast(true);
-    setTimeout(() => setShowToast(false), 3000);
+export default function OviChat() {
+  const router = useRouter();
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [input, setInput] = useState('');
+  const [hasConsent, setHasConsent] = useState<boolean | null>(null);
+  const [isTyping, setIsTyping] = useState(false);
+  const [chatState, setChatState] = useState<ChatState>({});
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages, isTyping]);
+
+  useEffect(() => {
+    if (hasConsent === true || hasConsent === false) {
+      setTimeout(() => {
+        setMessages([{
+          id: '1',
+          role: 'ovi',
+          text: "Fine girl, I am here. How are you feeling tonight? You don't have to type too much. Just tap what you feel.",
+          chips: ["I am scared", "My period is late", "I need Soft Place", "I am tired"]
+        }]);
+      }, 500);
+    }
+  }, [hasConsent]);
+
+  const handleSend = (text: string) => {
+    if (!text.trim()) return;
+
+    const userMsg: Message = { id: Date.now().toString(), role: 'user', text };
+    setMessages(prev => [...prev, userMsg]);
+    setInput('');
+    setIsTyping(true);
+
+    setTimeout(() => {
+      const reply = getOviReply(text, chatState);
+      setChatState(reply.newState);
+
+      const oviMsg: Message = {
+        id: (Date.now() + 1).toString(),
+        role: 'ovi',
+        text: reply.text,
+        isEmergency: reply.isEmergency,
+        chips: reply.chips
+      };
+
+      setMessages(prev => [...prev, oviMsg]);
+      setIsTyping(false);
+
+      // --- HANDLE ACTIONS (NAVIGATION) ---
+      if (reply.action === 'OPEN_SOFT_PLACE') {
+        setTimeout(() => {
+          router.push('/care?open=softplace'); // <--- Routes to Care but opens Soft Place
+        }, 2500); 
+      }
+      
+      if (reply.action === 'OPEN_YOU_PLACE') {
+        setTimeout(() => {
+          router.push('/care/you-place');
+        }, 2500); 
+      }
+      
+    }, 1500);
   };
 
-  return (
-    <main className="min-h-screen bg-[#FFF0F3] text-[#4A2C35] flex flex-col items-center pt-12 px-6 pb-32 font-sans relative overflow-hidden">
-      
-      {/* HEADER */}
-      <div className="w-full max-w-sm flex flex-col items-center mb-8">
-        <h1 className="text-2xl font-serif tracking-[0.2em] mb-1">OVI</h1>
-        <p className="text-xs text-[#4A2C35]/50">I am still learning to speak.</p>
-      </div>
-
-      {/* THE BREATHING ORB */}
-      <div className="flex-1 flex flex-col items-center justify-center w-full relative">
-        <div className="relative w-64 h-64 flex items-center justify-center">
-          {/* Outer Glow */}
-          <div className="absolute inset-0 bg-linear-to-tr from-[#FFB3C1] to-[#E6E6FA] rounded-full blur-3xl opacity-40 animate-orb-breathe" />
-          
-          {/* Inner Orb */}
-          <div className="relative w-48 h-48 rounded-full bg-linear-to-br from-[#FF8FA3] via-[#FFB3C1] to-[#E6E6FA] shadow-[0_0_50px_rgba(255,143,163,0.3)] animate-orb-breathe flex items-center justify-center">
-            {/* Soft inner highlight */}
-            <div className="absolute top-4 left-6 w-20 h-12 bg-white/40 rounded-full blur-md transform -rotate-45" />
-            <div className="absolute bottom-6 right-8 w-12 h-8 bg-white/20 rounded-full blur-sm transform rotate-12" />
+  if (hasConsent === null) {
+    return (
+      <div className="min-h-screen bg-[#FFF0F3] flex items-center justify-center p-6">
+        <div className="bg-white p-8 rounded-3xl shadow-lg max-w-sm w-full text-center animate-fade-in">
+          <div className="w-20 h-20 mx-auto rounded-full bg-linear-to-tr from-[#FF8FA3] to-[#9CAF88] animate-orb-breathe mb-6"></div>
+          <h2 className="text-xl font-bold text-[#4A2C35] mb-2">Ovi is here</h2>
+          <p className="text-[#8A2C3E] text-sm mb-8">
+            Fine girl, I am here. Sometimes I save our chats so I can learn how to hold you better. Is that okay?
+          </p>
+          <div className="flex flex-col gap-3">
+            <button onClick={() => setHasConsent(true)} className="w-full py-3 rounded-full bg-[#9CAF88] text-white font-semibold hover:bg-opacity-90 transition">
+              Yes, save my chats 💜
+            </button>
+            <button onClick={() => setHasConsent(false)} className="w-full py-3 rounded-full bg-[#FFF0F3] text-[#8A2C3E] font-semibold hover:bg-pink-100 transition">
+              No, keep it private 🤫
+            </button>
           </div>
         </div>
+      </div>
+    );
+  }
 
-        <div className="mt-12 text-center animate-fade-in" style={{ animationDelay: '1s' }}>
-          <p className="text-sm font-bold text-[#4A2C35]/80 mb-2">Ovi is resting.</p>
-          <p className="text-xs text-[#4A2C35]/50 max-w-60 leading-relaxed mx-auto">
-            I am watching your circles and holding your worries. If you need to tell me something tonight, write it below. I will read it in the morning.
+  return (
+    <div className="flex flex-col h-screen bg-[#FFF0F3] pb-20">
+      <div className="bg-[#9CAF88] px-6 py-4 rounded-b-3xl shadow-md flex items-center gap-4 sticky top-0 z-10">
+        <div className="w-12 h-12 rounded-full bg-linear-to-tr from-[#FF8FA3] to-[#FFF0F3] animate-orb-breathe shadow-inner"></div>
+        <div>
+          <h1 className="text-white font-bold text-lg">Ovi is here</h1>
+          <p className="text-white text-xs opacity-90 flex items-center gap-1">
+            <span className="w-2 h-2 bg-green-300 rounded-full inline-block"></span> Online • Only yours
           </p>
         </div>
       </div>
 
-      {/* INPUT BOX (Teaser) */}
-      <div className="w-full max-w-sm mt-auto relative">
-        {showToast && (
-          <div className="absolute -top-14 left-0 right-0 mx-auto w-max bg-[#4A2C35] text-white text-[11px] font-bold px-4 py-2 rounded-full shadow-lg animate-fade-in z-50">
-            Ovi's ears are still growing. She can't hear this yet 💜
+      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        {messages.map((msg) => (
+          <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} animate-slide-up-slow`}>
+            <div className={`max-w-[80%] p-4 rounded-2xl ${
+              msg.role === 'user' ? 'bg-[#FFC2CD] text-[#4A2C35] rounded-tr-sm' 
+              : msg.isEmergency ? 'bg-red-100 border-2 border-red-400 text-red-800 rounded-tl-sm'
+              : 'bg-[#D1DCC6] text-[#4A2C35] rounded-tl-sm'
+            }`}>
+              <p className="text-sm font-medium leading-relaxed">{msg.text}</p>
+              {msg.isEmergency && (
+                <div className="mt-3 flex flex-col gap-2">
+                  <a href="tel:112" className="block text-center bg-red-600 text-white py-2 rounded-full text-sm font-bold">Call 112 Emergency</a>
+                  <a href="https://wa.me/2348000000000" target="_blank" className="block text-center bg-white text-red-600 border border-red-600 py-2 rounded-full text-sm font-bold">WhatsApp a Doctor</a>
+                </div>
+              )}
+            </div>
+          </div>
+        ))}
+        {isTyping && (
+          <div className="flex justify-start animate-fade-in">
+            <div className="bg-[#D1DCC6] p-4 rounded-2xl rounded-tl-sm flex gap-1">
+              <span className="w-2 h-2 bg-[#4A2C35] rounded-full animate-bounce"></span>
+              <span className="w-2 h-2 bg-[#4A2C35] rounded-full animate-bounce delay-100"></span>
+              <span className="w-2 h-2 bg-[#4A2C35] rounded-full animate-bounce delay-200"></span>
+            </div>
           </div>
         )}
-        
-        <div 
-          onClick={handleInputTap}
-          className="w-full bg-white border border-[#4A2C35]/10 rounded-full py-4 px-5 flex items-center justify-between shadow-sm cursor-text active:scale-[0.98] transition-transform"
-        >
-          <span className="text-sm text-[#4A2C35]/40">Tell Ovi something...</span>
-          <div className="w-8 h-8 rounded-full bg-[#FFF0F3] flex items-center justify-center">
-            <span className="text-[#4A2C35]/30 text-lg">↑</span>
-          </div>
-        </div>
+        <div ref={messagesEndRef} />
       </div>
 
-    </main>
+      {!isTyping && messages.length > 0 && messages[messages.length - 1].chips && (
+        <div className="px-4 pb-2 flex gap-2 overflow-x-auto no-scrollbar animate-fade-in">
+          {messages[messages.length - 1].chips!.map((chip, i) => (
+            <button key={i} onClick={() => handleSend(chip)} className="whitespace-nowrap px-4 py-2 bg-white border border-[#9CAF88] text-[#4A2C35] rounded-full text-sm font-medium shadow-sm hover:bg-[#D1DCC6] transition">
+              {chip}
+            </button>
+          ))}
+        </div>
+      )}
+
+      <div className="p-4 bg-[#FFF0F3]">
+        <div className="flex items-center bg-white rounded-full p-2 px-4 shadow-sm border border-[#9CAF88]">
+          <input
+            type="text"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleSend(input)}
+            placeholder="Type to Ovi..."
+            className="flex-1 bg-transparent outline-none text-[#4A2C35] placeholder-[#9CAF88] text-sm"
+          />
+          <button onClick={() => handleSend(input)} className="w-10 h-10 bg-[#9CAF88] rounded-full flex items-center justify-center ml-2 hover:bg-opacity-90 transition">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white" className="w-5 h-5 ml-1">
+              <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
