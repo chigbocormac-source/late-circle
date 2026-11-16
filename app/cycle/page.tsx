@@ -12,8 +12,6 @@ export default function CyclePage() {
   const [lastPeriodDate, setLastPeriodDate] = useState<string>('');
   const [history, setHistory] = useState<string[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
-  const [selectedTags, setSelectedTags] = useState<string[]>([]);
-  const [tagMessage, setTagMessage] = useState<string | null>(null);
 
   const [showConfirm, setShowConfirm] = useState(false);
   const [selectedGirl, setSelectedGirl] = useState<string | null>(null);
@@ -24,18 +22,33 @@ export default function CyclePage() {
   const [shareBusy, setShareBusy] = useState(false);
   const [today, setToday] = useState<Date | null>(null);
 
-  const [showCalendar, setShowCalendar] = useState(false);
   const [calMonth, setCalMonth] = useState<Date | null>(null);
+
+  const [loggedTags, setLoggedTags] = useState<string[]>([]);
+  const [lastBleedDays, setLastBleedDays] = useState<number | null>(null);
+  
+  const [showLateWarning, setShowLateWarning] = useState(true);
 
   useEffect(() => {
     const savedDate = localStorage.getItem('lateCircleLastPeriod');
     if (savedDate) setLastPeriodDate(savedDate);
     const savedHistory = localStorage.getItem('lateCircleHistory');
     if (savedHistory) setHistory(JSON.parse(savedHistory));
-    const savedTags = localStorage.getItem('lateCircleTags');
-    if (savedTags) setSelectedTags(JSON.parse(savedTags));
     setToday(new Date());
     const d = new Date(); d.setDate(1); setCalMonth(d);
+
+    const savedTags = localStorage.getItem('lateCircleTags');
+    if (savedTags) setLoggedTags(JSON.parse(savedTags));
+
+    const savedBleed = localStorage.getItem('lateCircleLastBleedDays');
+    if (savedBleed) setLastBleedDays(parseInt(savedBleed));
+
+    // Check if she already acknowledged the warning today
+    const acknowledged = localStorage.getItem('lateCircleAcknowledgedLateWarning');
+    if (acknowledged === new Date().toISOString().split('T')[0]) {
+      setShowLateWarning(false);
+    }
+
     setIsLoaded(true);
   }, []);
 
@@ -45,6 +58,7 @@ export default function CyclePage() {
   let lateDays = 0;
   let windowStart = new Date(2000, 0, 1);
   let windowEnd = new Date(2000, 0, 1);
+  let daysUntilNext = 0;
 
   average = getRealCycleLength(
     lastPeriodDate || null,
@@ -53,17 +67,17 @@ export default function CyclePage() {
   );
   longestCycle = average + 7;
 
+  const cycleLengths: number[] = [];
   if (history.length >= 2 && lastPeriodDate) {
     const allDates = [...history, lastPeriodDate].sort((a, b) => new Date(a).getTime() - new Date(b).getTime());
-    const diffs: number[] = [];
     for (let i = 1; i < allDates.length; i++) {
       const d1 = new Date(allDates[i - 1]);
       const d2 = new Date(allDates[i]);
       const diff = Math.round((d2.getTime() - d1.getTime()) / (1000 * 60 * 60 * 24));
-      if (diff > 20 && diff < 60) diffs.push(diff);
+      if (diff > 20 && diff < 60) cycleLengths.push(diff);
     }
-    if (diffs.length > 0) {
-      const last3 = diffs.slice(-3);
+    if (cycleLengths.length > 0) {
+      const last3 = cycleLengths.slice(-3);
       average = Math.round(last3.reduce((a, b) => a + b, 0) / last3.length);
       longestCycle = Math.max(...last3);
     }
@@ -84,6 +98,8 @@ export default function CyclePage() {
     windowStart.setDate(nextPeriodDate.getDate() - 2);
     windowEnd = new Date(nextPeriodDate);
     windowEnd.setDate(nextPeriodDate.getDate() + 2);
+    
+    daysUntilNext = Math.max(0, Math.floor((windowStart.getTime() - todayClone.getTime()) / (1000 * 60 * 60 * 24)));
   }
 
   const girl = getCyclePhase(currentDay, average);
@@ -111,22 +127,10 @@ export default function CyclePage() {
   const isLastPeriod = (d: Date) => lastPeriodDate && isSameDay(d, new Date(lastPeriodDate));
   const isHistoryDay = (d: Date) => history.some(h => isSameDay(d, new Date(h)));
 
-  const toggleTag = (tag: string) => {
-    if (tag === 'bloat') setTagMessage("Bloat is not fat, fine girl. Your belly is just holding water today. Drink water, eat before 9pm, walk small if you can. I am here with you.");
-    else if (tag === 'waist pain') setTagMessage("Waist pain is hard. Lying down all day can make it feel worse. Walk small, even to junction and back, if you can. Rest after.");
-    else if (tag === 'acne') setTagMessage("Acne is annoying, I know. It doesn't mean you are dirty. Sleep early tonight if you can. Your skin will thank you small small.");
-    else if (tag === 'emotional') setTagMessage("Small thing will make you want to cry today. That's hormones, not you. Do 90 seconds of Calm. Breathe. I am here.");
-    else if (tag === 'cravings') setTagMessage("Cravings are loud today because your body wants quick energy. Eat protein first, then small sweet if you want. Don't fight yourself.");
-    else setTagMessage(null);
-    let newTags;
-    if (selectedTags.includes(tag)) { newTags = selectedTags.filter(t => t !== tag); setTagMessage(null); }
-    else newTags = [...selectedTags, tag];
-    setSelectedTags(newTags);
-    localStorage.setItem('lateCircleTags', JSON.stringify(newTags));
-  };
-
   const handlePeriodStart = () => {
-    const todayStr = new Date().toISOString();
+    const d = new Date();
+    const todayStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    
     if (lastPeriodDate) {
       const newHistory = [...history, lastPeriodDate];
       setHistory(newHistory);
@@ -135,9 +139,6 @@ export default function CyclePage() {
     }
     setLastPeriodDate(todayStr);
     localStorage.setItem('lateCircleLastPeriod', todayStr);
-    localStorage.removeItem('lateCircleData');
-    localStorage.removeItem('lateCircleDataDate');
-    localStorage.removeItem('lateCircleDailyHistory');
     setShowUndo(true);
     const userId = localStorage.getItem('lateCircleUserId');
     if (userId) {
@@ -194,6 +195,11 @@ export default function CyclePage() {
     finally { setShareBusy(false); }
   };
 
+  const whatsappMessage = lateDays > 0 
+    ? `I am ${lateDays} day${lateDays > 1 ? 's' : ''} late and a bit worried. Can we talk?`
+    : `My period is expected around ${windowStart.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}. I am on Day ${currentDay}.`;
+  const whatsappLink = `https://wa.me/?text=${encodeURIComponent(whatsappMessage)}`;
+
   const cyclePercent = (currentDay / average) * 100;
   const ringRadius = 85;
   const circleCircumference = 2 * Math.PI * ringRadius;
@@ -201,12 +207,51 @@ export default function CyclePage() {
 
   if (!isLoaded) return null;
 
+  const showStartButton = lateDays > 0 || currentDay >= average - 3 || currentDay <= 1;
+
   const girlData: Record<string, any> = {
-    rest: { title: "🌙 Rest Girl", days: "First 15% of your cycle", why: "Your body is bleeding. It takes energy. That is why you feel tired.", feel: "Cramps, low energy, wanting hot water.", want: "Soft rice, small Indomie, hot tea, sleep.", circles: "Focus: Sleep + Calm.\nFood is okay if you eat small.\nLeave Walk open. You are resting." },
-    fresh: { title: "🌱 Fresh Girl", days: "15% to 35% of your cycle", why: "Bleeding has stopped. Your energy is coming back.", feel: "Energy returning, less tired, wanting to talk.", want: "Normal appetite, to go out small.", circles: "Focus: Walk + Food.\nThis is your best time to build a streak." },
-    fine: { title: "✨ Fine Girl", days: "35% to 60% of your cycle", why: "This is your glow time. You feel confident.", feel: "Fine, glowing, high energy.", want: "To go out, take pictures, talk to people.", circles: "Focus: All 4.\nYou have the energy to close all 4 today." },
-    chop: { title: "🍚 Chop Girl", days: "60% to 80% of your cycle", why: "Your body wants extra energy. That is why you want to eat everything.", feel: "Very hungry, craving sweet and starchy food.", want: "Indomie, garri, puff puff, shawarma.", circles: "Focus: Food + Calm.\nAdd protein to your plate.\nWalk is optional." },
-    ready: { title: "💜 Ready Girl", days: "Last 20% of your cycle", why: "Your period is close. Your body is slowing down.", feel: "Tired, moody, bloated.", want: "To stay inside, sleep, ice cream, sweet names.", circles: "Focus: Sleep + Calm.\nLeave Food and Walk open if you are tired.\nKeep a pad in your bag." }
+    rest: { 
+      title: "🌙 Rest Girl", 
+      days: "First 18% of your cycle", 
+      why: "Your body is bleeding. It takes energy. That is why you feel tired.", 
+      feel: "Cramps, low energy, wanting hot water.", 
+      want: "Soft rice, small Indomie, hot tea, sleep.", 
+      circles: "Focus: Sleep + Calm.\nFood is okay if you eat small.\nLeave Walk open. You are resting." 
+    },
+    fresh: { 
+      title: "🌱 Fresh Girl", 
+      days: "18% to 48% of your cycle", 
+      why: "Bleeding has stopped. Your energy is coming back.", 
+      feel: "Energy returning, less tired, wanting to talk.", 
+      want: "Normal appetite, to go out small.", 
+      circles: "Focus: Walk + Food.\nThis is your best time to build a streak." 
+    },
+    chop: { 
+      title: "🍚 Chop Girl", 
+      days: "48% to 58% of your cycle", 
+      why: "Your body is burning energy fast. This is your peak phase, and your body wants fuel.", 
+      feel: "High energy, then hungry and craving sweet or starchy food.", 
+      want: "Indomie, garri, puff puff, shawarma, but also to go out and be social.", 
+      circles: "Focus: Food + Calm.\nAdd protein to your plate.\nWalk is optional." 
+    },
+    ready: { 
+      title: "💜 Ready Girl", 
+      days: "58% to 100% of your cycle", 
+      why: "Your period is close. Your body is slowing down and preparing.", 
+      feel: "Tired, moody, bloated, tender breasts.", 
+      want: "To stay inside, sleep, ice cream, sweet names.", 
+      circles: "Focus: Sleep + Calm.\nLeave Food and Walk open if you are tired.\nKeep a pad in your bag." 
+    }
+  };
+
+  const hasLoggedSymptoms = loggedTags.length > 0;
+  const topTag = loggedTags[0] || null;
+
+  // Helper to dismiss the warning for today
+  const dismissWarning = () => {
+    const todayKey = new Date().toISOString().split('T')[0];
+    localStorage.setItem('lateCircleAcknowledgedLateWarning', todayKey);
+    setShowLateWarning(false);
   };
 
   return (
@@ -216,21 +261,18 @@ export default function CyclePage() {
 
       <div className="flex flex-col items-center mb-2 w-full max-w-sm">
         <div className="bg-[#9CAF88]/15 border border-[#9CAF88]/20 px-4 py-1.5 rounded-full text-center">
-          <p className="text-[#5A7350] text-xs font-bold">{girl.emoji} Day {currentDay} • {girl.name}</p>
+          <p className="text-[#5A7350] text-xs font-bold">💜 Day {currentDay}</p>
         </div>
       </div>
 
-      {/* TAPABLE RING - TAP INSIDE CIRCLE */}
       <button
         onClick={() => {
           const d = new Date();
           d.setDate(1);
           setCalMonth(d);
-          setShowCalendar(true);
         }}
         className="relative mb-4 flex items-center justify-center active:scale-95 transition-transform cursor-pointer"
         style={{ width: '200px', height: '200px' }}
-        aria-label="Tap to see calendar"
       >
         <svg className="absolute inset-0 transform -rotate-90" width="200" height="200" viewBox="0 0 200 200">
           <circle cx="100" cy="100" r={ringRadius} fill="transparent" stroke="rgba(74, 44, 53, 0.08)" strokeWidth="10" />
@@ -249,107 +291,178 @@ export default function CyclePage() {
           ) : (
             <span className="text-[9px] text-[#4A2C35]/40 mt-2 font-medium">Waiting with you</span>
           )}
-          {/* TAP INSIDE CIRCLE */}
-          <span className="mt-2.5 px-2.5 py-1 rounded-full bg-[#4A2C35]/5 text-[9px] font-bold text-[#4A2C35]/50 tracking-wide">
-            Tap ↑ Calendar
-          </span>
         </div>
       </button>
 
-      {lateDays > 0 && currentDay <= longestCycle && (
-        <div className="w-full max-w-sm bg-white border border-[#9CAF88]/30 p-4 rounded-2xl mb-6 shadow-[0_8px_24px_-8px_rgba(74,44,53,0.06)]">
-          <p className="text-[10px] font-bold text-[#9CAF88] uppercase tracking-widest mb-1">Ovi is holding you</p>
-          <p className="text-sm text-[#4A2C35] leading-relaxed">Day {currentDay}. Your normal is {average} to {longestCycle}. You are still inside your own normal. Breathe, I'm here.</p>
-        </div>
-      )}
-      {lateDays > 0 && currentDay > longestCycle && currentDay <= longestCycle + 4 && (
-        <div className="w-full max-w-sm bg-white border border-[#FF8FA3]/30 p-4 rounded-2xl mb-6 shadow-sm animate-fade-in">
-          <p className="text-[10px] font-bold text-[#8A2C3E] uppercase tracking-widest mb-1">Ovi is holding you</p>
-          <p className="text-sm text-[#4A2C35] leading-relaxed mb-4">Day {currentDay}. Okay, now you are {currentDay - longestCycle} {currentDay - longestCycle === 1 ? 'day' : 'days'} past your longest. I am holding you. Have you been stressed? Not sleeping well? Let us wait together 2 more days.</p>
-          <div className="flex flex-col gap-2">
-            <button onClick={() => { logEvent('late_console_action', { action: 'stressed' }); router.push('/today?trigger=calm'); }} className="w-full bg-[#FFF0F3] text-[#4A2C35] border border-[#4A2C35]/10 py-3 rounded-xl font-bold text-sm active:scale-95 transition-all text-left px-4">I am stressed 🤍 Let's close Calm</button>
-            <button onClick={() => { logEvent('late_console_action', { action: 'sleep' }); router.push('/today?trigger=sleep'); }} className="w-full bg-[#FFF0F3] text-[#4A2C35] border border-[#4A2C35]/10 py-3 rounded-xl font-bold text-sm active:scale-95 transition-all text-left px-4">I am not sleeping 😴 Let's close Sleep</button>
-          </div>
-        </div>
-      )}
-      {currentDay > longestCycle + 4 && (
-        <div className="w-full max-w-sm bg-white border border-[#8A2C3E]/20 p-4 rounded-2xl mb-6 shadow-sm">
-          <p className="text-[10px] font-bold text-[#8A2C3E] uppercase tracking-widest mb-1">Ovi noticed</p>
-          <p className="text-sm text-[#4A2C35] leading-relaxed mb-3">Day {currentDay}. You are {currentDay - longestCycle} days past your longest. If you want, let us check what could be pushing it.</p>
-          <div className="flex flex-col gap-2">
-            <button onClick={() => router.push('/today?trigger=calm')} className="w-full bg-[#FFF0F3] text-[#4A2C35] border border-[#4A2C35]/10 py-3 rounded-xl font-bold text-sm active:scale-95 transition-all text-left px-4">I am stressed 🤍 Let's close Calm</button>
-            <button onClick={() => router.push('/today?trigger=sleep')} className="w-full bg-[#FFF0F3] text-[#4A2C35] border border-[#4A2C35]/10 py-3 rounded-xl font-bold text-sm active:scale-95 transition-all text-left px-4">I am not sleeping 😴 Let's close Sleep</button>
-            <button onClick={() => router.push('/today?trigger=food')} className="w-full bg-[#FFF0F3] text-[#4A2C35] border border-[#4A2C35]/10 py-3 rounded-xl font-bold text-sm active:scale-95 transition-all text-left px-4">I am not eating well 🍲 Let's close Food</button>
-            <a href="https://wa.me/2348000000000?text=Hi%20Ovi,%20I%20am%20late%20and%20I%20need%20to%20talk" target="_blank" className="w-full bg-[#4A2C35] text-white py-3 rounded-xl font-bold text-xs text-center active:scale-95">Let us talk about a test 💬</a>
-          </div>
+      {/* WARNING CARDS - DISMISSIBLE */}
+      {lateDays > 0 && showLateWarning && (
+        <div className="w-full max-w-sm bg-white border border-[#FF8FA3]/30 p-4 rounded-2xl mb-4 shadow-sm animate-fade-in">
+          <p className="text-[10px] font-bold text-[#8A2C3E] uppercase tracking-widest mb-1">Your cycle is taking longer this month</p>
+          <p className="text-sm text-[#4A2C35] leading-relaxed mb-3">
+            My girl, I see you. Your last three cycles were <strong>{cycleLengths.slice(-3).join(', ')} days</strong>. This one is now <strong>{currentDay} days</strong>. That is <strong>{lateDays} days longer</strong> than your recent pattern.
+          </p>
+          <p className="text-sm text-[#4A2C35] leading-relaxed mb-3">
+            This is not a diagnosis. We don't know the reason from the dates alone. Stress, travel, illness, changes in weight, hormonal conditions, medication and pregnancy can all be relevant.
+          </p>
+          <p className="text-sm text-[#4A2C35] leading-relaxed mb-3">
+            Let's look at your records together, without jumping to conclusions.
+          </p>
+          <a href={whatsappLink} target="_blank" rel="noopener noreferrer" className="w-full bg-[#4A2C35] text-white py-2.5 rounded-xl font-bold text-xs text-center block mb-2">Tell someone I trust 💬</a>
+          <button onClick={dismissWarning} className="w-full bg-[#FFF0F3] text-[#4A2C35]/60 py-2 rounded-xl text-xs font-bold active:scale-95 transition-transform">
+            I hear you, Ovi 🤍
+          </button>
         </div>
       )}
 
-      <button onClick={() => setShowConfirm(true)} className="w-full max-w-sm bg-[#4A2C35] text-white py-3.5 rounded-full text-sm font-bold shadow-[0_8px_20px_-4px_rgba(74,44,53,0.25)] active:scale-95 transition-transform mb-6 mt-2">My period started today 🌸</button>
-
-      <div className="w-full max-w-sm mb-6">
-        <h2 className="text-[10px] font-bold text-[#4A2C35]/40 uppercase tracking-widest mb-2 text-center">How are you feeling today?</h2>
-        <div className="flex overflow-x-auto gap-2 pb-2 px-1 [&::-webkit-scrollbar]:hidden" style={{ scrollbarWidth: 'none' }}>
-          {['bloat', 'acne', 'emotional', 'cravings', 'waist pain'].map(tag => (
-            <button key={tag} onClick={() => toggleTag(tag)} className={`shrink-0 px-4 py-1.5 rounded-full text-xs font-medium border transition-all ${selectedTags.includes(tag) ? 'bg-[#4A2C35] text-white border-[#4A2C35] shadow-[0_4px_12px_rgba(74,44,53,0.15)]' : 'bg-white text-[#4A2C35]/70 border-[#4A2C35]/10 shadow-[0_2px_8px_rgba(74,44,53,0.04)]'}`}>{tag}</button>
-          ))}
+      {lateDays >= 30 && showLateWarning && (
+        <div className="w-full max-w-sm bg-white border border-[#8A2C3E]/20 p-4 rounded-2xl mb-4 shadow-sm animate-fade-in">
+          <p className="text-[10px] font-bold text-[#8A2C3E] uppercase tracking-widest mb-1">A little care reminder</p>
+          <p className="text-sm text-[#4A2C35] leading-relaxed mb-3">
+            If you want peace of mind, a quick check-up can help. No pressure. You can also wait a few more days and see. Ovi is here to keep your records clear. A nurse or doctor can give you real answers when you are ready.
+          </p>
+          <button onClick={dismissWarning} className="w-full bg-[#FFF0F3] text-[#4A2C35]/60 py-2 rounded-xl text-xs font-bold active:scale-95 transition-transform">
+            I hear you, Ovi 🤍
+          </button>
         </div>
-        {tagMessage && <div className="bg-white border border-[#FFB3C1]/30 p-3 rounded-xl text-xs text-[#4A2C35]/80 w-full animate-slide-up shadow-[0_8px_24px_rgba(74,44,53,0.06)] leading-relaxed mt-2">{tagMessage}</div>}
+      )}
+
+      {lateDays >= 60 && showLateWarning && (
+        <div className="w-full max-w-sm bg-[#FFE5EC] border border-[#8A2C3E]/40 p-4 rounded-2xl mb-4 shadow-sm animate-fade-in">
+          <p className="text-[10px] font-bold text-[#8A2C3E] uppercase tracking-widest mb-1">Please see a doctor</p>
+          <p className="text-sm text-[#4A2C35] leading-relaxed mb-3">
+            It has been <strong>{lateDays} days</strong>. This is a long time. A doctor can check your hormones and give you real answers. You deserve peace of mind. Please book a visit soon.
+          </p>
+          <button onClick={dismissWarning} className="w-full bg-[#FFF0F3] text-[#4A2C35]/60 py-2 rounded-xl text-xs font-bold active:scale-95 transition-transform">
+            I hear you, Ovi 🤍
+          </button>
+        </div>
+      )}
+
+      {daysUntilNext <= 3 && daysUntilNext > 0 && lateDays <= 0 && (
+        <div className="w-full max-w-sm bg-white border border-[#FF8FA3]/30 p-4 rounded-2xl mb-4 shadow-sm animate-fade-in">
+          <p className="text-[10px] font-bold text-[#8A2C3E] uppercase tracking-widest mb-1">Period coming soon</p>
+          <p className="text-sm text-[#4A2C35] leading-relaxed mb-3">Your period is expected in {daysUntilNext} {daysUntilNext === 1 ? 'day' : 'days'}. Pack a pad in your bag today.</p>
+        </div>
+      )}
+
+      {/* REST OF THE PAGE */}
+      {cycleLengths.length >= 2 && (() => {
+        const recent3 = cycleLengths.slice(-3);
+        const min = Math.min(...recent3);
+        const max = Math.max(...recent3);
+        const variance = max - min;
+        
+        let summary = "";
+        let badgeColor = "text-[#9CAF88]";
+        
+        if (variance <= 3) {
+          summary = `Your last 3 cycles were ${recent3.join(', ')} days. Ovi is learning your pattern.`;
+        } else if (variance <= 7) {
+          summary = `Your cycle shifts a little. Your last 3 cycles were ${recent3.join(', ')} days. This is common with stress or travel.`;
+          badgeColor = "text-[#FF8FA3]";
+        } else {
+          summary = `Your cycle changes a lot. Your last 3 cycles were ${recent3.join(', ')} days. This is worth mentioning to a nurse when you see one.`;
+          badgeColor = "text-[#8A2C3E]";
+        }
+
+        return (
+          <div className="w-full max-w-sm bg-white border border-[#4A2C35]/5 rounded-2xl p-4 mb-4 shadow-sm">
+            <p className={`text-[10px] font-bold ${badgeColor} uppercase tracking-widest mb-1`}>Your Cycle Summary</p>
+            <p className="text-sm text-[#4A2C35] leading-relaxed">{summary}</p>
+          </div>
+        );
+      })()}
+
+      {calMonth && (
+        <div className="w-full max-w-sm bg-white border border-[#4A2C35]/5 rounded-3xl p-4 mb-4 shadow-sm">
+          <div className="flex justify-between items-center mb-2">
+            <button onClick={() => setCalMonth(prev => prev ? new Date(prev.getFullYear(), prev.getMonth() - 1, 1) : null)} className="w-8 h-8 rounded-full bg-[#FFF0F3] font-bold">‹</button>
+            <p className="font-bold text-xs">{calMonth.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })}</p>
+            <button onClick={() => setCalMonth(prev => prev ? new Date(prev.getFullYear(), prev.getMonth() + 1, 1) : null)} className="w-8 h-8 rounded-full bg-[#FFF0F3] font-bold">›</button>
+          </div>
+          <div className="grid grid-cols-7 gap-1 text-center text-[10px] font-bold text-[#4A2C35]/40 mb-1">
+            {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d, i) => <div key={i}>{d}</div>)}
+          </div>
+          <div className="grid grid-cols-7 gap-1 text-center text-[11px]">
+            {calendarDays.map((d, i) => {
+              if (!d) return <div key={i} />;
+              const todayIs = isSameDay(d, new Date());
+              const inWin = inWindow(d);
+              const lastP = isLastPeriod(d);
+              const hist = isHistoryDay(d);
+              return (
+                <div key={i} className={`py-2 rounded-lg font-medium relative ${inWin ? 'bg-[#FF8FA3] text-white font-bold' : todayIs ? 'bg-[#4A2C35] text-white font-bold' : lastP || hist ? 'bg-[#FFF0F3] text-[#8A2C3E] font-bold' : 'text-[#4A2C35]/70'}`}>
+                  {d.getDate()}
+                  {(lastP || hist) && !inWin && !todayIs && <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 bg-[#FF8FA3] rounded-full" />}
+                </div>
+              );
+            })}
+          </div>
+          <p className="text-[9px] text-[#4A2C35]/50 mt-2 text-center">
+            Expected: {windowStart.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} - {windowEnd.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+          </p>
+        </div>
+      )}
+
+      <div className="w-full max-w-sm bg-white border border-[#4A2C35]/5 rounded-2xl p-5 mb-4 shadow-sm animate-fade-in">
+        <p className="text-[10px] font-bold text-[#9CAF88] uppercase tracking-widest mb-3">
+          Your Month in One Look — {today ? today.toLocaleDateString('en-GB', { month: 'long' }) : ''}
+        </p>
+        
+        <div className="flex flex-col gap-2.5">
+          <div className="flex items-start gap-2">
+            <span className="text-[#9CAF88] text-xs font-bold mt-0.5">•</span>
+            <p className="text-xs text-[#4A2C35]/80">
+              Your recent pattern: <strong>{average} days</strong> — {longestCycle - average <= 3 ? 'Consistent for you' : 'Shifts a little'}
+            </p>
+          </div>
+
+          <div className="flex items-start gap-2">
+            <span className="text-[#9CAF88] text-xs font-bold mt-0.5">•</span>
+            <p className="text-xs text-[#4A2C35]/80">
+              You bled for: <strong>{lastBleedDays !== null ? `${lastBleedDays} days` : 'Not recorded yet'}</strong>
+            </p>
+          </div>
+
+          <div className="flex items-start gap-2">
+            <span className="text-[#9CAF88] text-xs font-bold mt-0.5">•</span>
+            <p className="text-xs text-[#4A2C35]/80">
+              Most logged: <strong>{hasLoggedSymptoms && topTag ? topTag : 'No symptoms recorded'}</strong>
+            </p>
+          </div>
+
+          <div className="bg-[#FFF0F3] rounded-xl p-3 mt-1 border border-[#FFB3C1]/20">
+            <p className="text-[10px] font-bold text-[#8A2C3E] uppercase tracking-widest mb-1">Ovi's Note</p>
+            <p className="text-xs text-[#4A2C35] leading-relaxed italic">
+              {lateDays > 0 
+                ? `My girl, your last three recorded cycles were ${cycleLengths.slice(-3).join(', ')} days. This cycle is taking longer. I can't tell you why from the dates alone, but we can keep your story updated and take things one step at a time.`
+                : (hasLoggedSymptoms && topTag 
+                  ? `You logged ${topTag} recently. Keep telling me what you feel, and I will learn your pattern.`
+                  : "I am still learning your pattern. Log your symptoms today, and I will start noticing what is normal for you.")}
+            </p>
+          </div>
+        </div>
       </div>
 
-      <button onClick={() => { setSelectedGirl(girl.id); logEvent('girl_explainer_opened', { girl: girl.id }); }} className="w-full max-w-sm bg-white border border-[#4A2C35]/5 rounded-2xl p-4 flex justify-between items-center shadow-[0_8px_20px_-8px_rgba(74,44,53,0.08)] active:scale-[0.98] transition-transform mb-4">
-        <div className="flex items-center gap-3"><span className="text-xl">{girl.emoji}</span><div className="text-left"><h3 className="text-sm font-bold text-[#4A2C35]">Understand Your 5 Girls</h3><p className="text-[10px] text-[#4A2C35]/50">Tap to see all 5 — you are {girl.name}.</p></div></div>
+      {showStartButton ? (
+        <button onClick={() => setShowConfirm(true)} className="w-full max-w-sm bg-[#4A2C35] text-white py-3.5 rounded-full text-sm font-bold shadow-[0_8px_20px_-4px_rgba(74,44,53,0.25)] active:scale-95 transition-transform mb-4">My period started today 🌸</button>
+      ) : (
+        <button onClick={() => setShowConfirm(true)} className="w-full max-w-sm bg-white border border-[#4A2C35]/15 text-[#4A2C35]/60 py-3 rounded-full text-xs font-bold shadow-sm active:scale-95 transition-transform mb-4 flex items-center justify-center gap-2">
+          <span className="text-lg">🌸</span> Period started early? Log it
+        </button>
+      )}
+
+      <button onClick={() => { setSelectedGirl(girl.id); logEvent('girl_explainer_opened', { girl: girl.id }); }} className="w-full max-w-sm bg-white border border-[#4A2C35]/5 rounded-2xl p-4 flex justify-between items-center shadow-[0_8px_20px_-8px_rgba(74,44,53,0.08)] active:scale-[0.98] transition-transform mb-3">
+        <div className="flex items-center gap-3"><span className="text-xl">{girl.emoji}</span><div className="text-left"><h3 className="text-sm font-bold text-[#4A2C35]">Understand Your 4 Girls</h3><p className="text-[10px] text-[#4A2C35]/50">Why you feel different every week.</p></div></div>
         <span className="text-[#4A2C35]/30 text-lg">›</span>
       </button>
 
-      {/* CALENDAR MODAL - TOP ALIGNED */}
-      {showCalendar && today && calMonth && (
-        <div className="fixed inset-0 bg-[#4A2C35]/20 backdrop-blur-sm z-100 flex items-start justify-center p-4 pt-6 animate-fade-in overflow-y-auto" onClick={() => setShowCalendar(false)}>
-          <div className="w-full max-w-sm bg-white rounded-3xl p-5 pb-6 shadow-[0_24px_48px_-16px_rgba(74,44,53,0.25)] animate-slide-up" onClick={(e) => e.stopPropagation()}>
-            <div className="flex justify-between items-center mb-1">
-              <h3 className="text-lg font-bold text-[#4A2C35]">Period Calendar</h3>
-              <button onClick={() => setShowCalendar(false)} className="w-8 h-8 rounded-full bg-[#FFF0F3] flex items-center justify-center text-[#4A2C35]/60 font-bold active:scale-95">✕</button>
-            </div>
-            <p className="text-xs text-[#4A2C35]/50 mb-4">Your normal is {average} - {longestCycle} days. Expected: {windowStart.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} - {windowEnd.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</p>
+      <button onClick={() => router.push('/care/you-place')} className="w-full max-w-sm bg-white border border-[#4A2C35]/5 rounded-2xl p-4 flex justify-between items-center shadow-[0_8px_20px_-8px_rgba(74,44,53,0.08)] active:scale-[0.98] transition-transform mb-4">
+        <div className="flex items-center gap-3"><span className="text-xl">📋</span><div className="text-left"><h3 className="text-sm font-bold text-[#4A2C35]">Prepare My Health Summary</h3><p className="text-[10px] text-[#4A2C35]/50">Keep your health information together for a doctor.</p></div></div>
+        <span className="text-[#4A2C35]/30 text-lg">›</span>
+      </button>
 
-            <div className="flex justify-between items-center mb-3">
-              <button onClick={() => setCalMonth(prev => prev ? new Date(prev.getFullYear(), prev.getMonth() - 1, 1) : null)} className="w-8 h-8 rounded-full bg-[#FFF0F3] font-bold">‹</button>
-              <p className="font-bold text-sm">{calMonth.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })}</p>
-              <button onClick={() => setCalMonth(prev => prev ? new Date(prev.getFullYear(), prev.getMonth() + 1, 1) : null)} className="w-8 h-8 rounded-full bg-[#FFF0F3] font-bold">›</button>
-            </div>
-
-            <div className="grid grid-cols-7 gap-1 text-center text-[10px] font-bold text-[#4A2C35]/40 mb-1">
-              {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d, i) => <div key={i}>{d}</div>)}
-            </div>
-            <div className="grid grid-cols-7 gap-1 text-center text-xs">
-              {calendarDays.map((d, i) => {
-                if (!d) return <div key={i} />;
-                const todayIs = isSameDay(d, new Date());
-                const inWin = inWindow(d);
-                const lastP = isLastPeriod(d);
-                const hist = isHistoryDay(d);
-                return (
-                  <div key={i} className={`py-2.5 rounded-xl font-medium relative ${inWin ? 'bg-[#FF8FA3] text-white font-bold' : todayIs ? 'bg-[#4A2C35] text-white font-bold' : lastP || hist ? 'bg-[#FFF0F3] text-[#8A2C3E] font-bold' : 'text-[#4A2C35]/70'}`}>
-                    {d.getDate()}
-                    {(lastP || hist) && !inWin && !todayIs && <span className="absolute bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 bg-[#FF8FA3] rounded-full" />}
-                  </div>
-                );
-              })}
-            </div>
-
-            <div className="flex flex-wrap gap-3 mt-4 text-[10px] text-[#4A2C35]/60">
-              <span className="flex items-center gap-1"><span className="w-3 h-3 bg-[#FF8FA3] rounded-full" /> Expected window</span>
-              <span className="flex items-center gap-1"><span className="w-3 h-3 bg-[#4A2C35] rounded-full" /> Today</span>
-              <span className="flex items-center gap-1"><span className="w-3 h-3 bg-[#FFF0F3] border border-[#FF8FA3]/30 rounded-full" /> Past period</span>
-            </div>
-
-            <button onClick={() => { setShowCalendar(false); setShowConfirm(true); }} className="w-full mt-5 bg-[#4A2C35] text-white py-3 rounded-full font-bold text-sm active:scale-95">My period started today 🌸</button>
-            <button onClick={() => { setShowCalendar(false); const d = new Date(); d.setDate(1); setCalMonth(d); }} className="w-full mt-2 py-2 text-xs font-medium text-[#4A2C35]/50">Back to this month</button>
-          </div>
-        </div>
-      )}
-
-      {/* CONFIRM PERIOD MODAL */}
+      {/* MODALS */}
       {showConfirm && (
         <div className="fixed inset-0 bg-[#4A2C35]/20 backdrop-blur-sm z-100 flex items-center justify-center p-6 animate-fade-in">
           <div className="bg-white border border-[#4A2C35]/5 rounded-3xl p-6 w-full max-w-sm shadow-[0_24px_48px_-16px_rgba(74,44,53,0.25)] text-center">
@@ -364,7 +477,6 @@ export default function CyclePage() {
         </div>
       )}
 
-      {/* UNDO RESET MODAL */}
       {showUndo && (
         <div className="fixed inset-0 bg-[#4A2C35]/20 backdrop-blur-sm z-100 flex items-center justify-center p-6 animate-fade-in">
           <div className="bg-white border border-[#4A2C35]/5 rounded-3xl p-6 w-full max-w-sm shadow-[0_24px_48px_-16px_rgba(74,44,53,0.25)] text-center">
@@ -379,7 +491,6 @@ export default function CyclePage() {
         </div>
       )}
 
-      {/* SHARE PREVIEW MODAL */}
       {sharePreview && (
         <div className="fixed inset-0 bg-[#4A2C35]/40 backdrop-blur-sm z-100 flex items-start justify-center p-4 pt-6 animate-fade-in overflow-y-auto" onClick={() => setSharePreview(null)}>
           <div className="w-full max-w-sm bg-white rounded-3xl p-5 shadow-[0_24px_48px_-16px_rgba(74,44,53,0.25)] animate-slide-up" onClick={(e) => e.stopPropagation()}>
@@ -387,7 +498,6 @@ export default function CyclePage() {
               <h3 className="text-lg font-bold text-[#4A2C35]">Your share card</h3>
               <button onClick={() => setSharePreview(null)} className="w-8 h-8 rounded-full bg-[#FFF0F3] flex items-center justify-center text-[#4A2C35]/60 font-bold active:scale-95">✕</button>
             </div>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={sharePreview.url} alt="Your share card" className="w-full rounded-2xl border border-[#4A2C35]/10 mb-3 select-none" draggable={false} />
             <p className="text-[11px] text-[#4A2C35]/60 text-center mb-3 leading-relaxed">Long-press the image above to save it. The caption is already copied to your clipboard.</p>
             <button onClick={() => setSharePreview(null)} className="w-full bg-[#4A2C35] text-white py-3 rounded-full font-bold active:scale-95 shadow-[0_8px_20px_-4px_rgba(74,44,53,0.2)]">Done</button>
@@ -395,17 +505,16 @@ export default function CyclePage() {
         </div>
       )}
 
-      {/* 5 GIRLS MODAL - TOP, NOT BOTTOM */}
       {selectedGirl && (() => {
         const data = girlData[selectedGirl];
-        const order = ['rest', 'fresh', 'fine', 'chop', 'ready'];
-        const emojis: Record<string, string> = { rest: '🌙', fresh: '🌱', fine: '✨', chop: '🍚', ready: '💜' };
-        const labels: Record<string, string> = { rest: 'Rest', fresh: 'Fresh', fine: 'Fine', chop: 'Chop', ready: 'Ready' };
+        const order = ['rest', 'fresh', 'chop', 'ready'];
+        const emojis: Record<string, string> = { rest: '🌙', fresh: '🌱', chop: '🍚', ready: '💜' };
+        const labels: Record<string, string> = { rest: 'Rest', fresh: 'Fresh', chop: 'Chop', ready: 'Ready' };
         return (
           <div className="fixed inset-0 bg-[#4A2C35]/20 backdrop-blur-sm z-100 flex items-start justify-center p-4 pt-6 pb-28 overflow-y-auto animate-fade-in" onClick={() => setSelectedGirl(null)}>
             <div className="w-full max-w-sm bg-white rounded-3xl p-6 shadow-[0_24px_48px_-16px_rgba(74,44,53,0.25)] animate-slide-up" onClick={(e) => e.stopPropagation()}>
               <div className="flex justify-between items-center mb-4">
-                <h2 className="text-lg font-bold text-[#4A2C35]">Your 5 Girls</h2>
+                <h2 className="text-lg font-bold text-[#4A2C35]">Your 4 Girls</h2>
                 <button onClick={() => setSelectedGirl(null)} className="w-8 h-8 rounded-full bg-[#FFF0F3] flex items-center justify-center text-[#4A2C35]/60 font-bold active:scale-95">✕</button>
               </div>
 
@@ -435,7 +544,7 @@ export default function CyclePage() {
                 <div><h3 className="text-[10px] font-bold text-[#4A2C35]/40 uppercase tracking-widest mb-1">You will want</h3><p className="text-sm text-[#4A2C35] leading-relaxed">{data.want}</p></div>
                 <div><h3 className="text-[10px] font-bold text-[#4A2C35]/40 uppercase tracking-widest mb-1">Your circles</h3><p className="text-sm text-[#4A2C35] leading-relaxed whitespace-pre-line">{data.circles}</p></div>
               </div>
-              <p className="text-[10px] text-[#4A2C35]/40 text-center mb-4 leading-relaxed">35 days is not 1 mood. It's 5 girls. This is your pattern, not everybody's. Not medical. Just your pattern.</p>
+              <p className="text-[10px] text-[#4A2C35]/40 text-center mb-4 leading-relaxed">35 days is not 1 mood. It's 4 girls. This is your pattern, not everybody's. Not medical. Just your pattern.</p>
               <button onClick={handleShareGirl} disabled={shareBusy} className="w-full bg-[#9CAF88] text-white py-3 rounded-full font-bold active:scale-95 shadow-[0_8px_20px_-4px_rgba(156,175,136,0.3)] mb-2 disabled:opacity-60">{shareBusy ? 'Preparing…' : 'Share this Girl →'}</button>
               <button onClick={() => setSelectedGirl(null)} className="w-full bg-[#4A2C35] text-white py-3 rounded-full font-bold active:scale-95 shadow-[0_8px_20px_-4px_rgba(74,44,53,0.2)]">Got it, Ovi</button>
             </div>

@@ -11,16 +11,15 @@ import { subscribeToPush } from '../../utils/push';
 import { getClaimCopy } from '../../utils/claimCopy';
 import { getWorryForTags } from '../../utils/worryBubble';
 
-// --- THE HEALING MATRIX (Fixed: 4 Girls only) ---
+// --- THE HEALING MATRIX (Exact Prescriptions) ---
 function getDailyCheck(cycleDay: number, averageCycle: number, girlId: string) {
   const percentage = (cycleDay / averageCycle) * 100;
   
-  if (percentage > 100) return { girlName: 'Ready Girl', checkType: 'calm', question: 'Did you take a moment for yourself today?' };
-  if (percentage <= 15) return { girlName: 'Rest Girl', checkType: 'sleep', question: 'Did you rest well last night?' };
-  if (percentage <= 35) return { girlName: 'Fresh Girl', checkType: 'walk', question: 'Did you move your body today?' };
-  if (percentage <= 75) return { girlName: 'Chop Girl', checkType: 'food', question: 'Did you eat well today?' };
+  if (percentage > 100) return { girlName: 'Ready Girl', checkType: 'calm', question: 'Did you take 90 seconds of calm today?', context: 'Or do you want to do it with me right now?' };  if (percentage <= 15) return { girlName: 'Rest Girl', checkType: 'sleep', question: 'Did you sleep before 10:30pm last night?', context: 'Your body needs rest to rebuild.' };
+  if (percentage <= 35) return { girlName: 'Fresh Girl', checkType: 'walk', question: 'Did you move your body today?', context: '20 minutes of walking, dancing, or sweating. Anything counts.' };
+  if (percentage <= 75) return { girlName: 'Chop Girl', checkType: 'food', question: 'Did you eat well today?', context: 'At least one real meal with protein or veg. Not just junk.' };
   
-  return { girlName: 'Ready Girl', checkType: 'calm', question: 'Did you take a moment for yourself today?' };
+  return { girlName: 'Ready Girl', checkType: 'calm', question: 'Did you take 2 minutes of calm today?', context: 'Or do you want to do it with me right now?' };
 }
 
 function getCycleData(lastPeriodDateString: string | null, cycleLengths: number[] = []) {
@@ -108,6 +107,9 @@ function HomeContent() {
   const [showCheckModal, setShowCheckModal] = useState(false);
   const [checkStep, setCheckStep] = useState<'ask' | 'grace' | 'refused'>('ask');
   const [showNightCheck, setShowNightCheck] = useState(false);
+  
+  // NEW: The safety net is quiet and collapsed
+  const [showSafetyNote, setShowSafetyNote] = useState(false);
 
   useEffect(() => {
     const onboarded = localStorage.getItem('lateCircleOnboarded');
@@ -293,9 +295,12 @@ function HomeContent() {
   const isDone = circles[dailyCheck.checkType as keyof typeof circles];
   
   const historyFromStorage = typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('lateCircleHistory') || '[]') : [];
+  const cycleCount = historyFromStorage.length + 1;
   const cycleBounds = getLateBoundary(historyFromStorage, lastPeriodDate, typeof window !== 'undefined' ? localStorage.getItem('lateCircleType') : null);
-  const isLate = cycleBounds.isLate;
-  const lateDays = cycleBounds.daysLate;
+  
+  // FIX: Use the SAME formula as the Cycle page
+  const lateDays = cycleData.currentDay - cycleData.average;
+  const isLate = lateDays > 0;
 
   const copy = getClaimCopy(lateDays);
 
@@ -309,10 +314,11 @@ function HomeContent() {
   const gist = getDailyGist(
     cycleData.currentDay, 
     cycleData.average, 
-    cycleData.lateDays, 
+    lateDays, 
     savedTags, 
     savedFood,
-    userSexuallyActive // <-- PASSED IN
+    userSexuallyActive,
+    cycleCount
   );
 
   const saveState = (updates: Partial<typeof circles>) => {
@@ -525,20 +531,18 @@ function HomeContent() {
       {/* --- THE TAPPABLE CIRCLE DASHBOARD --- */}
       <div className="w-full max-w-sm flex flex-col items-center animate-fade-in mt-2 mb-4">
         
-        {/* 1. The Girl (Top) */}
+        {/* 1. The Girl (Top) - CALM VERSION */}
         <div className="text-center mb-4 w-full flex flex-col items-center">
           
           <h1 className="text-2xl font-serif text-[#4A2C35] italic mb-3">
-            Today you are <span className="text-[#FF8FA3] font-bold not-italic">{dailyCheck.girlName}</span>
+            {isLate ? "Today, slow down." : `Today you are ${dailyCheck.girlName}`}
           </h1>
 
-          {morningGreeting && (
-            <p className="text-xs text-[#4A2C35]/60 font-medium px-4 leading-relaxed mb-3">
-              {morningGreeting}
-            </p>
-          )}
+          <p className="text-xs text-[#4A2C35]/60 font-medium px-4 leading-relaxed mb-3">
+            {isLate ? "Yesterday is gone. Today is new. Slow down today. Just rest." : morningGreeting}
+          </p>
 
-          {promiseDay && (
+          {promiseDay && cycleData.currentDay <= 7 && (
             <p className="text-[10px] font-bold text-[#FF8FA3] bg-[#FFF0F3] px-3 py-1 rounded-full">
               Day {promiseDay} of 7 🌱
             </p>
@@ -546,7 +550,7 @@ function HomeContent() {
           
         </div>
 
-        {/* 2. The Tappable Circle (Center) */}
+        {/* 2. The Tappable Circle (Center) - FIXED PINK RING */}
         <button 
           onClick={() => {
             if (!isDone) {
@@ -560,14 +564,15 @@ function HomeContent() {
               }
             }
           }}
-          className={`relative flex flex-col items-center justify-center w-52 h-52 rounded-full transition-all duration-500 active:scale-95 ${isDone ? 'cursor-default' : 'cursor-pointer shadow-[0_20px_50px_-12px_rgba(255,143,163,0.3)] animate-orb-breathe'}`}        >
+          className={`relative flex flex-col items-center justify-center w-52 h-52 rounded-full transition-all duration-500 active:scale-95 ${isDone ? 'cursor-default' : 'cursor-pointer shadow-[0_20px_50px_-12px_rgba(255,143,163,0.3)] animate-orb-breathe'}`}
+        >
           <div className={`absolute inset-0 rounded-full shadow-[0_12px_40px_-12px_rgba(74,44,53,0.15)] ${isDone ? 'bg-[#9CAF88]' : 'bg-white border border-[#4A2C35]/5'}`}></div>
           
           <svg className="absolute inset-0 transform -rotate-90" width="208" height="208" viewBox="0 0 208 208">
             <circle cx="104" cy="104" r={ringRadius} fill="transparent" stroke="rgba(74, 44, 53, 0.05)" strokeWidth="8" />
             <circle
               cx="104" cy="104" r={ringRadius} fill="transparent"
-              stroke={isLate ? "#FF8FA3" : "#9CAF88"} strokeWidth="8"
+              stroke={isDone ? "#9CAF88" : (isLate ? "#FF8FA3" : "#9CAF88")} strokeWidth="8"
               strokeDasharray={circleCircumference} strokeDashoffset={strokeDashoffset}
               strokeLinecap="round" className="transition-all duration-1000 ease-out"
             />
@@ -599,27 +604,33 @@ function HomeContent() {
           </div>
         </button>
 
-        {/* 3. The Real-Time Gist (Dynamic) */}
-        <div className="w-full px-2 text-center mt-6 mb-6 animate-fade-in flex flex-col items-center">
-          
-          {/* The Badge */}
-          <span className="text-[10px] font-bold text-[#9CAF88] uppercase tracking-widest mb-2 bg-white/50 px-3 py-1 rounded-full">
-            {gist.badge}
-          </span>
-
-          <p className="text-[11px] font-bold text-[#9CAF88] uppercase tracking-widest mb-1">Message from Ovi</p>
-          <p className="text-sm text-[#4A2C35] font-bold mb-1">
-            {gist.title}
-          </p>
-          <p className="text-xs text-[#4A2C35]/60 leading-relaxed mb-4">
-            {gist.message}
-          </p>
-          <div className="bg-[#FFF0F3] border border-[#FFB3C1]/30 rounded-xl p-3 inline-block">
-            <p className="text-xs text-[#8A2C3E] font-medium italic">
-              "{gist.action}"
-            </p>
+        {/* 3. The Locked Message (Unlocks when checked in) */}
+        {!isDone ? (
+          <div className="w-full px-2 text-center mt-6 mb-6 animate-fade-in flex flex-col items-center">
+            <div className="bg-white border border-[#4A2C35]/10 rounded-2xl p-4 w-full text-center">
+              <p className="text-[11px] font-bold text-[#9CAF88] uppercase tracking-widest mb-1">🔒 A message from Ovi is waiting.</p>
+              <p className="text-xs text-[#4A2C35]/60">Tap your circle to unlock it.</p>
+            </div>
           </div>
-        </div>
+        ) : (
+          <div className="w-full px-2 text-center mt-6 mb-6 animate-fade-in flex flex-col items-center">
+            <span className="text-[10px] font-bold text-[#9CAF88] uppercase tracking-widest mb-2 bg-white/50 px-3 py-1 rounded-full">
+              {gist.badge}
+            </span>
+            <p className="text-[11px] font-bold text-[#9CAF88] uppercase tracking-widest mb-1">Message from Ovi</p>
+            <p className="text-sm text-[#4A2C35] font-bold mb-1">
+              {gist.title}
+            </p>
+            <p className="text-xs text-[#4A2C35]/60 leading-relaxed mb-4">
+              {gist.message}
+            </p>
+            <div className="bg-[#FFF0F3] border border-[#FFB3C1]/30 rounded-xl p-3 inline-block">
+              <p className="text-xs text-[#8A2C3E] font-medium italic">
+                "{gist.action}"
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* 4. The Bleeding Card */}
         {isDone && cycleData.currentDay >= 1 && cycleData.currentDay <= 7 && !hasLoggedBleedingToday && (
@@ -690,6 +701,32 @@ function HomeContent() {
 
       <InstallHint />
 
+      {/* SAFETY NOTE - SMALL, GREY, COLLAPSED */}
+      {isLate && (
+        <div className="w-full max-w-sm mb-6">
+          <button 
+            onClick={() => setShowSafetyNote(!showSafetyNote)}
+            className="w-full text-left text-[10px] text-[#4A2C35]/40 font-medium px-2 py-1 flex items-center gap-1"
+          >
+            <span>+</span> A quiet note from Ovi about when to get care
+          </button>
+          
+          {showSafetyNote && (
+            <div className="bg-white border border-[#4A2C35]/5 rounded-2xl p-4 mt-2 animate-fade-in">
+              <p className="text-[11px] text-[#4A2C35]/70 leading-relaxed mb-3">
+                If you have severe pain, heavy bleeding that soaks more than 2 pads in 1 hour, fever, fainting, or a positive test and you are worried, please talk to a nurse or go to a clinic. Ovi is here for daily care, not medical treatment. You don't have to figure it out alone.
+              </p>
+              <button 
+                onClick={() => setShowSafetyNote(false)}
+                className="w-full bg-[#FFF0F3] text-[#4A2C35]/60 py-2 rounded-xl text-xs font-bold active:scale-95 transition-transform"
+              >
+                I have heard you, Ovi 💜
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* --- MODALS START HERE --- */}
 
       {/* NIGHT CHECK MODAL */}
@@ -714,11 +751,26 @@ function HomeContent() {
             
             {checkStep === 'ask' && (
               <div className="flex flex-col items-center">
-                <h3 className="text-xl font-bold text-[#4A2C35] mb-2">How did your body feel?</h3>
+                <h3 className="text-xl font-bold text-[#4A2C35] mb-2">{dailyCheck.question}</h3>
                 <p className="text-sm text-[#4A2C35]/60 mb-6 px-4">
-                  {dailyCheck.question}
+                  {dailyCheck.context}
                 </p>
                 <div className="flex flex-col gap-2 w-full">
+                  
+                  {dailyCheck.checkType === 'calm' && (
+                    <button 
+                      onClick={() => {
+                        setShowCheckModal(false);
+                        setActiveModal('calm');
+                        setCalmView('breathing');
+                        setBreathTime(90);
+                      }}
+                      className="w-full bg-[#4A2C35] text-white py-3.5 rounded-xl font-bold active:scale-95 shadow-md text-sm mb-2"
+                    >
+                      Yes, let's do it together 🧠
+                    </button>
+                  )}
+
                   <button 
                     onClick={() => {
                       if (dailyCheck.checkType === 'walk') saveState({ walk: true });
@@ -731,7 +783,7 @@ function HomeContent() {
                     }}
                     className="w-full bg-[#9CAF88] text-white py-3.5 rounded-xl font-bold active:scale-95 shadow-md text-sm"
                   >
-                    I gave my body what it needed ✅
+                    I already did it ✅
                   </button>
                   
                   <button 
@@ -759,7 +811,7 @@ function HomeContent() {
                   Small small is still progress. Let's just do one tiny thing together right now. 
                   {dailyCheck.checkType === 'sleep' ? " Close your eyes and take 3 deep breaths." 
                    : dailyCheck.checkType === 'walk' ? " Stand up and stretch your arms to the ceiling." 
-                   : dailyCheck.checkType === 'calm' ? " Close your eyes for 10 seconds and just breathe." 
+                   : dailyCheck.checkType === 'calm' ? " Close your eyes and breathe with me for 90 seconds." 
                    : " Drink one glass of water right now."}
                 </p>
                 <div className="flex flex-col gap-2 w-full">

@@ -10,12 +10,13 @@ export default function YouPlace() {
   const [isLoaded, setIsLoaded] = useState(false);
 
   const [data, setData] = useState({
+    age: '',
     lastPeriod: '',
     cycleLength: '',
     bleedDays: '',
     flow: '',
     clots: '',
-    painLevel: 5,
+    painLevel: null as number | null,
     painWhere: [] as string[],
     spotting: '',
     signs: [] as string[],
@@ -29,8 +30,10 @@ export default function YouPlace() {
     family: '',
     sexuallyActive: '',
     testResult: '',
+    testDate: '',
     doctorVisit: '',
-    doctorNotes: '',
+    doctorSaid: '',
+    myNoteToDoctor: '',
   });
 
   useEffect(() => {
@@ -41,44 +44,51 @@ export default function YouPlace() {
         ...parsed,
         pregnancyDate: parsed.pregnancyDate || '',
         medDate: parsed.medDate || '',
-        doctorNotes: parsed.doctorNotes || '',
+        testDate: parsed.testDate || '',
+        myNoteToDoctor: parsed.myNoteToDoctor || '',
+        doctorSaid: parsed.doctorSaid || '',
+        painLevel: parsed.painLevel !== undefined ? parsed.painLevel : null,
       });
     }
     const savedStep = localStorage.getItem('lateCircleYouPlaceStep');
-    if (savedStep) setStep(parseInt(savedStep));
+    if (savedStep) {
+      const s = parseInt(savedStep);
+      if (s >= 1 && s <= 5) setStep(s);
+    }
     setIsLoaded(true);
   }, []);
 
-  // Helper to sync to Supabase
+  // Sync only non-sensitive data to Supabase
   const syncToSupabase = (currentData: typeof data) => {
     const userId = localStorage.getItem('lateCircleUserId');
     if (!userId) return;
 
+    // We only sync fields that are NOT highly sensitive.
+    // Meds, pregnancy history, sexual activity, and personal notes stay on her phone.
     supabase.from('you_place').upsert([{
       user_id: userId,
+      age: currentData.age || null,
       last_period: currentData.lastPeriod || null,
-      cycle_length: currentData.cycleLength,
-      bleed_days: currentData.bleedDays,
-      flow: currentData.flow,
-      clots: currentData.clots,
-      pain_level: currentData.painLevel,
-      pain_where: currentData.painWhere,
-      spotting: currentData.spotting,
-      signs: currentData.signs,
-      sign_frequency: currentData.signFrequency,
-      meds: currentData.meds,
-      med_date: currentData.medDate || null,
-      pregnancy_history: currentData.pregnancyHistory,
-      pregnancy_date: currentData.pregnancyDate || null,
-      weight: currentData.weight,
-      stress: currentData.stress,
-      family: currentData.family,
-      sexually_active: currentData.sexuallyActive,
-      test_result: currentData.testResult,
-      doctor_visit: currentData.doctorVisit,
-      doctor_notes: currentData.doctorNotes
+      cycle_length: currentData.cycleLength || null,
+      bleed_days: currentData.bleedDays || null,
+      flow: currentData.flow || null,
+      clots: currentData.clots || null,
+      pain_level: currentData.painLevel ?? null,
+      pain_where: currentData.painWhere || [],
+      spotting: currentData.spotting || null,
+      signs: currentData.signs || [],
+      sign_frequency: currentData.signFrequency || null,
+      weight: currentData.weight || null,
+      stress: currentData.stress || [],
+      family: currentData.family || null,
+      doctor_visit: currentData.doctorVisit || null,
     }], { onConflict: 'user_id' }).then(({ error }) => {
-      if (error) console.error("You place error:", error);
+      if (error) {
+        console.error("You place error code:", error.code);
+        console.error("You place error message:", error.message);
+        console.error("You place error details:", error.details);
+        console.error("You place error hint:", error.hint);
+      }
     });
   };
 
@@ -113,7 +123,12 @@ export default function YouPlace() {
     if (current.includes(value)) {
       setData({ ...data, [key]: current.filter(v => v !== value) });
     } else {
-      setData({ ...data, [key]: [...current, value] });
+      if (value === 'Nothing' || value === 'None') {
+        setData({ ...data, [key]: [value] });
+      } else {
+        const filtered = current.filter(v => v !== 'Nothing' && v !== 'None');
+        setData({ ...data, [key]: [...filtered, value] });
+      }
     }
   };
 
@@ -121,7 +136,8 @@ export default function YouPlace() {
     if (!data.lastPeriod) return false;
     const last = new Date(data.lastPeriod);
     const today = new Date();
-    const diffTime = Math.abs(today.getTime() - last.getTime());
+    if (last > today) return false;
+    const diffTime = today.getTime() - last.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     return diffDays > 60;
   };
@@ -164,6 +180,18 @@ export default function YouPlace() {
             <h2 className="text-sm font-bold text-[#8A2C3E]">Step 1: My Periods</h2>
             
             <div>
+              <label className="text-xs font-bold text-[#4A2C35]/70 block mb-2">How old are you?</label>
+              <div className="flex flex-wrap gap-2">
+                {['Under 18', '18-24', '25-30', '31+'].map(opt => (
+                  <button key={opt} onClick={() => setData({ ...data, age: opt })}
+                    className={`px-4 py-2 rounded-xl text-xs font-medium border ${data.age === opt ? 'bg-[#4A2C35] text-white border-[#4A2C35]' : 'bg-[#FFF0F3] text-[#4A2C35]/60 border-[#4A2C35]/10'}`}>
+                    {opt}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div>
               <label className="text-xs font-bold text-[#4A2C35]/70 block mb-2">When did your last period start?</label>
               <input 
                 type="date" 
@@ -174,7 +202,7 @@ export default function YouPlace() {
               {isMoreThan60Days() && (
                 <div className="mt-3 bg-[#FFE5EC] border border-[#FF8FA3]/30 rounded-xl p-3">
                   <p className="text-[11px] font-bold text-[#8A2C3E] leading-relaxed">
-                    Fine girl, it has been a long time. Please make sure you mention this to the doctor, and try to get a scan this week.
+                    It's been more than 60 days since your last recorded period. Please arrange a medical review to understand what's happening. If pregnancy is possible, consider taking a pregnancy test.
                   </p>
                 </div>
               )}
@@ -226,9 +254,21 @@ export default function YouPlace() {
             <div>
               <label className="text-xs font-bold text-[#4A2C35]/70 block mb-2">Do you see clots?</label>
               <div className="flex gap-2">
-                {['Yes', 'No'].map(opt => (
+                {['No', 'Small', 'Big'].map(opt => (
                   <button key={opt} onClick={() => setData({ ...data, clots: opt })}
                     className={`flex-1 py-2 rounded-xl text-xs font-medium border ${data.clots === opt ? 'bg-[#4A2C35] text-white border-[#4A2C35]' : 'bg-[#FFF0F3] text-[#4A2C35]/60 border-[#4A2C35]/10'}`}>
+                    {opt}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label className="text-xs font-bold text-[#4A2C35]/70 block mb-2">Spotting between periods?</label>
+              <div className="flex gap-2">
+                {['Yes', 'No'].map(opt => (
+                  <button key={opt} onClick={() => setData({ ...data, spotting: opt })}
+                    className={`flex-1 py-2 rounded-xl text-xs font-medium border ${data.spotting === opt ? 'bg-[#4A2C35] text-white border-[#4A2C35]' : 'bg-[#FFF0F3] text-[#4A2C35]/60 border-[#4A2C35]/10'}`}>
                     {opt}
                   </button>
                 ))}
@@ -239,17 +279,19 @@ export default function YouPlace() {
               <label className="text-xs font-bold text-[#4A2C35]/70 block mb-2">Pain level (1-10)</label>
               <input 
                 type="range" min="1" max="10" 
-                value={data.painLevel}
+                value={data.painLevel || 5}
                 onChange={(e) => setData({ ...data, painLevel: parseInt(e.target.value) })}
                 className="w-full accent-[#FF8FA3]" 
               />
-              <p className="text-center text-sm font-bold text-[#8A2C3E] mt-1">{data.painLevel} / 10</p>
+              <p className="text-center text-sm font-bold text-[#8A2C3E] mt-1">
+                {data.painLevel !== null ? `${data.painLevel} / 10` : 'Not recorded'}
+              </p>
             </div>
 
             <div>
               <label className="text-xs font-bold text-[#4A2C35]/70 block mb-2">Where is the pain?</label>
               <div className="flex flex-wrap gap-2">
-                {['Waist', 'Belly', 'Back'].map(opt => (
+                {['Waist', 'Belly', 'Back', 'Other'].map(opt => (
                   <button key={opt} onClick={() => toggleArray('painWhere', opt)}
                     className={`px-4 py-2 rounded-xl text-xs font-medium border ${data.painWhere.includes(opt) ? 'bg-[#4A2C35] text-white border-[#4A2C35]' : 'bg-[#FFF0F3] text-[#4A2C35]/60 border-[#4A2C35]/10'}`}>
                     {opt}
@@ -268,7 +310,7 @@ export default function YouPlace() {
             <div>
               <label className="text-xs font-bold text-[#4A2C35]/70 block mb-2">Tick what you feel:</label>
               <div className="flex flex-wrap gap-2">
-                {['Acne', 'Hair on chin', 'Cravings', 'Bloat', 'Tired', 'Emotional', 'Waist pain'].map(opt => (
+                {['Acne', 'Hair on chin', 'Cravings', 'Bloat', 'Tired', 'Emotional', 'Waist pain', 'None'].map(opt => (
                   <button key={opt} onClick={() => toggleArray('signs', opt)}
                     className={`px-3 py-2 rounded-xl text-xs font-medium border ${data.signs.includes(opt) ? 'bg-[#4A2C35] text-white border-[#4A2C35]' : 'bg-[#FFF0F3] text-[#4A2C35]/60 border-[#4A2C35]/10'}`}>
                     {opt}
@@ -291,11 +333,11 @@ export default function YouPlace() {
           </div>
         )}
 
-        {/* STEP 4: THE SENSITIVE STUFF */}
+        {/* STEP 4: THE SENSITIVE STUFF (Local Only) */}
         {step === 4 && (
           <div className="animate-fade-in space-y-5">
             <h2 className="text-sm font-bold text-[#8A2C3E]">Step 4: What your body took</h2>
-            <p className="text-[11px] text-[#4A2C35]/50 italic mb-4">Only on your phone. Skip anything you want. No judgement.</p>
+            <p className="text-[11px] text-[#4A2C35]/50 italic mb-4">Only on your phone. Never sent anywhere. Skip anything you want. No judgement.</p>
             
             <div>
               <label className="text-xs font-bold text-[#4A2C35]/70 block mb-2">Did you take any of these this month?</label>
@@ -311,7 +353,7 @@ export default function YouPlace() {
 
             {data.meds.length > 0 && !data.meds.includes('Nothing') && (
               <div>
-                <label className="text-xs font-bold text-[#4A2C35]/70 block mb-2">When did you take it?</label>
+                <label className="text-xs font-bold text-[#4A2C35]/70 block mb-2">When did you take it? (Most recent)</label>
                 <input 
                   type="date" 
                   value={data.medDate || ''}
@@ -332,7 +374,7 @@ export default function YouPlace() {
                 ))}
               </div>
               
-              {data.pregnancyHistory?.includes('Miscarriage') || data.pregnancyHistory?.includes('Abortion') ? (
+              {data.pregnancyHistory !== 'No' && data.pregnancyHistory !== '' && (
                 <div className="mt-3">
                   <label className="text-xs font-bold text-[#4A2C35]/70 block mb-2">When did it happen?</label>
                   <input 
@@ -342,12 +384,12 @@ export default function YouPlace() {
                     className="w-full bg-[#FFF0F3] border border-[#4A2C35]/10 text-[#4A2C35] p-3 rounded-xl text-sm focus:outline-none focus:border-[#FF8FA3]" 
                   />
                 </div>
-              ) : null}
+              )}
             </div>
           </div>
         )}
 
-        {/* STEP 5: LIFE & FAMILY */}
+        {/* STEP 5: LIFE & FAMILY (Local Only) */}
         {step === 5 && (
           <div className="animate-fade-in space-y-5">
             <h2 className="text-sm font-bold text-[#8A2C3E]">Step 5: My Life & Family</h2>
@@ -379,7 +421,7 @@ export default function YouPlace() {
             <div>
               <label className="text-xs font-bold text-[#4A2C35]/70 block mb-2">Family history (Mum/Sister)</label>
               <div className="flex flex-wrap gap-2">
-                {['Mum - fibroid', 'Sister - PCOS', 'None', "I don't know"].map(opt => (
+                {['Mum - fibroid', 'Sister - PCOS', 'None', "I don't know", 'Other'].map(opt => (
                   <button key={opt} onClick={() => setData({ ...data, family: opt })}
                     className={`px-3 py-2 rounded-xl text-xs font-medium border ${data.family === opt ? 'bg-[#4A2C35] text-white border-[#4A2C35]' : 'bg-[#FFF0F3] text-[#4A2C35]/60 border-[#4A2C35]/10'}`}>
                     {opt}
@@ -412,6 +454,18 @@ export default function YouPlace() {
               </div>
             </div>
 
+            {data.testResult === 'Negative' || data.testResult === 'Positive' ? (
+              <div>
+                <label className="text-xs font-bold text-[#4A2C35]/70 block mb-2">When did you take the test?</label>
+                <input 
+                  type="date" 
+                  value={data.testDate || ''}
+                  onChange={(e) => setData({ ...data, testDate: e.target.value })}
+                  className="w-full bg-[#FFF0F3] border border-[#4A2C35]/10 text-[#4A2C35] p-3 rounded-xl text-sm focus:outline-none focus:border-[#FF8FA3]" 
+                />
+              </div>
+            ) : null}
+
             <div className="border-t border-[#4A2C35]/5 pt-5">
               <label className="text-xs font-bold text-[#4A2C35]/70 block mb-2">Did you see a doctor about this delay?</label>
               <div className="flex flex-wrap gap-2">
@@ -428,13 +482,23 @@ export default function YouPlace() {
                   <label className="text-xs font-bold text-[#4A2C35]/70 block mb-2">What did they tell you?</label>
                   <input 
                     type="text" 
-                    value={data.doctorNotes || ''}
-                    onChange={(e) => setData({ ...data, doctorNotes: e.target.value })}
+                    value={data.doctorSaid || ''}
+                    onChange={(e) => setData({ ...data, doctorSaid: e.target.value })}
                     placeholder="e.g. They said I was not pregnant"
                     className="w-full bg-[#FFF0F3] border border-[#4A2C35]/10 text-[#4A2C35] p-3 rounded-xl text-sm focus:outline-none focus:border-[#FF8FA3]" 
                   />
                 </div>
               )}
+            </div>
+
+            <div>
+              <label className="text-xs font-bold text-[#4A2C35]/70 block mb-2">Anything you want the doctor to know? (In your own words)</label>
+              <textarea 
+                value={data.myNoteToDoctor || ''}
+                onChange={(e) => setData({ ...data, myNoteToDoctor: e.target.value })}
+                placeholder="I have been feeling..."
+                className="w-full h-24 bg-[#FFF0F3] border border-[#4A2C35]/10 text-[#4A2C35] p-3 rounded-xl text-sm focus:outline-none focus:border-[#FF8FA3] resize-none" 
+              />
             </div>
           </div>
         )}
