@@ -11,15 +11,17 @@ import { subscribeToPush } from '../../utils/push';
 import { getClaimCopy } from '../../utils/claimCopy';
 import { getWorryForTags } from '../../utils/worryBubble';
 
-// --- THE HEALING MATRIX (Exact Prescriptions) ---
+// --- THE HEALING MATRIX ---
 function getDailyCheck(cycleDay: number, averageCycle: number, girlId: string) {
   const percentage = (cycleDay / averageCycle) * 100;
   
-  if (percentage > 100) return { girlName: 'Ready Girl', checkType: 'calm', question: 'Did you take 90 seconds of calm today?', context: 'Or do you want to do it with me right now?' };  if (percentage <= 15) return { girlName: 'Rest Girl', checkType: 'sleep', question: 'Did you sleep before 10:30pm last night?', context: 'Your body needs rest to rebuild.' };
+  if (percentage > 100) return { girlName: 'Ready Girl', checkType: 'calm', question: 'Did you take 90 seconds of calm today?', context: 'Or do you want to do it with me right now?' };
+  if (percentage <= 15) return { girlName: 'Rest Girl', checkType: 'sleep', question: 'Did you sleep before 10:30pm last night?', context: 'Your body needs rest to rebuild.' };
   if (percentage <= 35) return { girlName: 'Fresh Girl', checkType: 'walk', question: 'Did you move your body today?', context: '20 minutes of walking, dancing, or sweating. Anything counts.' };
-  if (percentage <= 75) return { girlName: 'Chop Girl', checkType: 'food', question: 'Did you eat well today?', context: 'At least one real meal with protein or veg. Not just junk.' };
+  if (percentage <= 60) return { girlName: 'Fine Girl', checkType: 'food', question: 'Did you eat well today?', context: 'At least one real meal with protein or veg. Not just junk.' };
+  if (percentage <= 80) return { girlName: 'Chop Girl', checkType: 'food', question: 'Did you eat well today?', context: 'At least one real meal with protein or veg. Not just junk.' };
   
-  return { girlName: 'Ready Girl', checkType: 'calm', question: 'Did you take 2 minutes of calm today?', context: 'Or do you want to do it with me right now?' };
+  return { girlName: 'Ready Girl', checkType: 'calm', question: 'Did you take 90 seconds of calm today?', context: 'Or do you want to do it with me right now?' };
 }
 
 function getCycleData(lastPeriodDateString: string | null, cycleLengths: number[] = []) {
@@ -105,11 +107,15 @@ function HomeContent() {
   });
 
   const [showCheckModal, setShowCheckModal] = useState(false);
-  const [checkStep, setCheckStep] = useState<'ask' | 'grace' | 'refused'>('ask');
+  const [checkStep, setCheckStep] = useState<'ask' | 'grace' | 'refused' | 'success'>('ask');
   const [showNightCheck, setShowNightCheck] = useState(false);
-  
-  // NEW: The safety net is quiet and collapsed
   const [showSafetyNote, setShowSafetyNote] = useState(false);
+
+  // Food logger states
+  const [foodLogStep, setFoodLogStep] = useState<'select' | 'fix' | 'done' | 'custom'>('select');
+  const [selectedFoodName, setSelectedFoodName] = useState<string | null>(null);
+  const [selectedFoodFix, setSelectedFoodFix] = useState<string | null>(null);
+  const [customFood, setCustomFood] = useState('');
 
   useEffect(() => {
     const onboarded = localStorage.getItem('lateCircleOnboarded');
@@ -298,13 +304,11 @@ function HomeContent() {
   const cycleCount = historyFromStorage.length + 1;
   const cycleBounds = getLateBoundary(historyFromStorage, lastPeriodDate, typeof window !== 'undefined' ? localStorage.getItem('lateCircleType') : null);
   
-  // FIX: Use the SAME formula as the Cycle page
   const lateDays = cycleData.currentDay - cycleData.average;
   const isLate = lateDays > 0;
 
   const copy = getClaimCopy(lateDays);
 
-  // PULL REAL-TIME DATA FOR THE GIST
   const savedTags = typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('lateCircleTags') || '[]') : [];
   const savedFood = typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('lateCircleLastFoodLog') || 'null')?.name : null;
   
@@ -448,18 +452,78 @@ function HomeContent() {
   const tomorrowCheck = getDailyCheck(cycleData.currentDay + 1, cycleData.average, girl.id);
   const tomorrowSame = tomorrowCheck.girlName === dailyCheck.girlName;
 
+  // THE TOP NIGERIAN CARBS
+  const topCarbs = [
+    { name: 'Indomie', fix: 'Add an egg or veg to slow the sugar spike.' },
+    { name: 'Rice', fix: 'Add beans, fish, or chicken to slow the spike.' },
+    { name: 'Eba / Garri', fix: 'Small eba, plenty soup. The soup is the medicine.' },
+    { name: 'Bread', fix: 'Add egg or beans. Bread alone is just sugar.' },
+    { name: 'Yam', fix: 'Add egg or vegetables. Yam alone is starch.' },
+    { name: 'Plantain', fix: 'Dodo is sweet, but add beans, egg, or fish to slow the spike.' },
+  ];
+
+  const handleFoodSelect = (food: { name: string; fix: string }) => {
+    setSelectedFoodName(food.name);
+    setSelectedFoodFix(food.fix);
+    setFoodLogStep('fix');
+  };
+
+  const handleCustomFood = () => {
+    const food = customFood.toLowerCase().trim();
+    if (!food) return;
+    
+    // Keyword scanning logic
+    const hasCarbs = ['rice', 'eba', 'garri', 'yam', 'bread', 'indomie', 'plantain', 'semo', 'fufu', 'spaghetti', 'noodles'].some(carb => food.includes(carb));
+    const hasProtein = ['egg', 'chicken', 'fish', 'beans', 'meat', 'ugu', 'egusi', 'okra', 'vegetable', 'moi moi', 'turkey', 'beef'].some(prot => food.includes(prot));
+    
+    setSelectedFoodName(customFood);
+    
+    if (hasCarbs && hasProtein) {
+      setSelectedFoodFix("That is a good balance! The protein and the carb together keep your sugar steady. You gave your body what it needed.");
+      setFoodLogStep('done');
+      saveState({ food: true });
+      setTimeout(() => {
+        setShowCheckModal(false);
+        setShowWinCelebration(true);
+        setTimeout(() => setShowWinCelebration(false), 2500);
+      }, 2000);
+    } else if (hasCarbs && !hasProtein) {
+      setSelectedFoodFix("I see a carb. Did you add protein or veg? Add an egg, fish, or vegetables to slow the sugar spike.");
+      setFoodLogStep('fix');
+    } else if (!hasCarbs && hasProtein) {
+      setSelectedFoodFix("I see protein or veg. That is good. Did you add a small carb (like rice or yam) to keep you full?");
+      setFoodLogStep('fix');
+    } else {
+      setSelectedFoodFix("I don't recognize this meal. Just make sure you added protein or veg. That is the medicine.");
+      setFoodLogStep('fix');
+    }
+  };
+
+  const handleFoodFix = (didAddFix: boolean) => {
+    if (!selectedFoodName) return;
+    
+    if (didAddFix) {
+      saveState({ food: true });
+      setFoodLogStep('done');
+      setTimeout(() => {
+        setShowCheckModal(false);
+        setShowWinCelebration(true);
+        setTimeout(() => setShowWinCelebration(false), 2500);
+      }, 1500);
+    } else {
+      setFoodLogStep('done');
+      setTimeout(() => {
+        setShowCheckModal(false);
+        setShowWinCelebration(true);
+        setTimeout(() => setShowWinCelebration(false), 2500);
+      }, 1500);
+    }
+  };
+
   return (
     <main className={`h-screen overflow-y-auto flex flex-col items-center pt-12 pb-40 px-6 font-sans relative animate-page-enter transition-colors duration-500 ${isLate ? 'bg-[#FFE5EC]' : 'bg-[#FFF0F3]'} text-[#4A2C35]`}>
       
-      {showWinCelebration && (
-        <div className="absolute inset-0 z-200 flex flex-col items-center justify-center bg-[#FFF0F3]/95 backdrop-blur-md animate-fade-in">
-          <div className="w-32 h-32 rounded-full bg-[#9CAF88] flex items-center justify-center mb-6 animate-pop-in shadow-[0_0_60px_rgba(156,175,136,0.3)]">
-            <span className="text-7xl text-white font-bold">✓</span>
-          </div>
-          <h2 className="text-3xl font-bold text-[#4A2C35] mb-2 animate-slide-up-slow">You did well.</h2>
-          <p className="text-sm text-[#4A2C35]/60 animate-slide-up-slow">You checked in today 💚</p>
-        </div>
-      )}
+
 
       {showPeriodCame && (
         <div className="absolute inset-0 bg-[#FFF0F3] z-200 flex flex-col items-center justify-center p-6 text-center animate-fade-in">
@@ -531,15 +595,15 @@ function HomeContent() {
       {/* --- THE TAPPABLE CIRCLE DASHBOARD --- */}
       <div className="w-full max-w-sm flex flex-col items-center animate-fade-in mt-2 mb-4">
         
-        {/* 1. The Girl (Top) - CALM VERSION */}
+        {/* 1. The Girl (Top) */}
         <div className="text-center mb-4 w-full flex flex-col items-center">
           
           <h1 className="text-2xl font-serif text-[#4A2C35] italic mb-3">
-            {isLate ? "Today, slow down." : `Today you are ${dailyCheck.girlName}`}
+            Today you are {dailyCheck.girlName}
           </h1>
 
           <p className="text-xs text-[#4A2C35]/60 font-medium px-4 leading-relaxed mb-3">
-            {isLate ? "Yesterday is gone. Today is new. Slow down today. Just rest." : morningGreeting}
+            {morningGreeting}
           </p>
 
           {promiseDay && cycleData.currentDay <= 7 && (
@@ -550,7 +614,7 @@ function HomeContent() {
           
         </div>
 
-        {/* 2. The Tappable Circle (Center) - FIXED PINK RING */}
+        {/* 2. The Tappable Circle (Center) */}
         <button 
           onClick={() => {
             if (!isDone) {
@@ -564,14 +628,16 @@ function HomeContent() {
               }
             }
           }}
-          className={`relative flex flex-col items-center justify-center w-52 h-52 rounded-full transition-all duration-500 active:scale-95 ${isDone ? 'cursor-default' : 'cursor-pointer shadow-[0_20px_50px_-12px_rgba(255,143,163,0.3)] animate-orb-breathe'}`}
+          className={`relative flex flex-col items-center justify-center w-64 h-64 rounded-full transition-all duration-500 active:scale-95 ${
+            isDone ? 'cursor-default' : 'cursor-pointer shadow-[0_20px_50px_-12px_rgba(255,143,163,0.3)] animate-orb-breathe'
+          }`}
         >
           <div className={`absolute inset-0 rounded-full shadow-[0_12px_40px_-12px_rgba(74,44,53,0.15)] ${isDone ? 'bg-[#9CAF88]' : 'bg-white border border-[#4A2C35]/5'}`}></div>
           
-          <svg className="absolute inset-0 transform -rotate-90" width="208" height="208" viewBox="0 0 208 208">
-            <circle cx="104" cy="104" r={ringRadius} fill="transparent" stroke="rgba(74, 44, 53, 0.05)" strokeWidth="8" />
+          <svg className="absolute inset-0 transform -rotate-90" width="256" height="256" viewBox="0 0 256 256">
+            <circle cx="128" cy="128" r={ringRadius} fill="transparent" stroke="rgba(74, 44, 53, 0.05)" strokeWidth="8" />
             <circle
-              cx="104" cy="104" r={ringRadius} fill="transparent"
+              cx="128" cy="128" r={ringRadius} fill="transparent"
               stroke={isDone ? "#9CAF88" : (isLate ? "#FF8FA3" : "#9CAF88")} strokeWidth="8"
               strokeDasharray={circleCircumference} strokeDashoffset={strokeDashoffset}
               strokeLinecap="round" className="transition-all duration-1000 ease-out"
@@ -592,11 +658,14 @@ function HomeContent() {
                 <h3 className="text-[10px] font-bold text-[#8A2C3E] uppercase tracking-widest mb-2">
                   Your One Check
                 </h3>
-                <p className="text-[14px] font-bold text-[#4A2C35] leading-snug mb-4 px-2">
+                <p className="text-[15px] font-bold text-[#4A2C35] leading-snug mb-2 px-2">
                   {dailyCheck.question}
                 </p>
+                <p className="text-[10px] text-[#4A2C35]/60 leading-relaxed mb-4 px-4">
+                  {dailyCheck.context}
+                </p>
                 
-                <div className="px-5 py-2.5 rounded-full bg-[#FF8FA3] text-white text-[10px] font-bold uppercase tracking-widest shadow-[0_4px_16px_rgba(255,143,163,0.4)] animate-pulse">
+                <div className="px-6 py-2.5 rounded-full bg-[#FF8FA3] text-white text-[10px] font-bold uppercase tracking-widest shadow-[0_4px_16px_rgba(255,143,163,0.4)] animate-pulse">
                   Check In
                 </div>
               </>
@@ -604,7 +673,7 @@ function HomeContent() {
           </div>
         </button>
 
-        {/* 3. The Locked Message (Unlocks when checked in) */}
+        {/* 3. The Locked Message */}
         {!isDone ? (
           <div className="w-full px-2 text-center mt-6 mb-6 animate-fade-in flex flex-col items-center">
             <div className="bg-white border border-[#4A2C35]/10 rounded-2xl p-4 w-full text-center">
@@ -624,6 +693,13 @@ function HomeContent() {
             <p className="text-xs text-[#4A2C35]/60 leading-relaxed mb-4">
               {gist.message}
             </p>
+            {gist.recommendation && (
+              <div className="bg-[#FFF0F3] border border-[#FFB3C1]/30 rounded-xl p-3 inline-block mb-2">
+                <p className="text-xs text-[#8A2C3E] font-medium">
+                  🍲 {gist.recommendation}
+                </p>
+              </div>
+            )}
             <div className="bg-[#FFF0F3] border border-[#FFB3C1]/30 rounded-xl p-3 inline-block">
               <p className="text-xs text-[#8A2C3E] font-medium italic">
                 "{gist.action}"
@@ -651,16 +727,53 @@ function HomeContent() {
 
         {/* 5. The Tomorrow Teaser */}
         {isDone && (
-          <div className="w-full bg-white rounded-2xl p-4 mb-4 text-center shadow-sm animate-fade-in">
-            <p className="text-[10px] font-bold text-[#9CAF88] uppercase tracking-widest mb-1">Tomorrow</p>
-            <p className="text-sm font-bold text-[#4A2C35] mb-1">
-              {tomorrowSame ? "I will check on your rest again." : `You become ${tomorrowCheck.girlName}.`}
-            </p>
-            <p className="text-xs text-[#4A2C35]/60 leading-relaxed">
-              {tomorrowSame 
-                ? `Tonight: bed by 10:30. ${nextPhase ? `${nextPhase.name} arrives in ${nextPhase.days} day${nextPhase.days > 1 ? 's' : ''}.` : ''}` 
-                : `Ovi will ask: "${tomorrowCheck.question}"`}
-            </p>
+          <div className="w-full bg-white rounded-2xl p-5 mb-4 text-center shadow-sm animate-fade-in border border-[#4A2C35]/5">
+            <p className="text-[10px] font-bold text-[#9CAF88] uppercase tracking-widest mb-2">Tomorrow</p>
+
+            {isLate ? (
+              <>
+                <p className="text-sm text-[#4A2C35] font-bold mb-2 leading-snug">
+                  Still waiting with you.
+                </p>
+                <p className="text-xs text-[#4A2C35]/70 leading-relaxed">
+                  Your body is taking its time. That is not a failure. Tomorrow I will check on you again — same calm, same care. Tonight, just rest.
+                </p>
+              </>
+            ) : (
+              <>
+                <p className="text-sm text-[#4A2C35] font-bold mb-2 leading-snug">
+                  {tomorrowSame
+                    ? "I will check on your rest again."
+                    : nextPhase && nextPhase.name === 'Rest Girl'
+                      ? "Your period might arrive. Rest well tonight."
+                      : `You become ${tomorrowCheck.girlName}.`}
+                </p>
+
+                <p className="text-xs text-[#4A2C35]/70 leading-relaxed">
+                  {tomorrowSame
+                    ? nextPhase
+                      ? `Your body is still in ${dailyCheck.girlName}. ${nextPhase.name} will come in ${nextPhase.days} day${nextPhase.days > 1 ? 's' : ''}. Tonight, just sleep well.`
+                      : `Your body is still in ${dailyCheck.girlName}. Tonight: bed by 10:30.`
+                    : tomorrowCheck.girlName === 'Fresh Girl'
+                      ? "Your bleeding is stopping. Your body is waking up again. You will feel lighter tomorrow."
+                      : tomorrowCheck.girlName === 'Fine Girl'
+                        ? "Your body is getting ready to release an egg. Your energy will go up. Your skin may look clearer. You will have energy for people."
+                        : tomorrowCheck.girlName === 'Chop Girl'
+                          ? "Your body is burning energy fast now. That is why you will feel hungry and want sweet or starchy food. It is not greed, it is your body asking for fuel."
+                          : tomorrowCheck.girlName === 'Ready Girl'
+                            ? "Your body is slowing down to prepare for your period. You may feel tired, moody, or bloated. That is normal. Don't fight it."
+                            : tomorrowCheck.girlName === 'Rest Girl'
+                              ? "Your body is getting ready to bleed. You may feel heavy and tired. That is your body working hard. Rest."
+                              : ""}
+                </p>
+
+                {gist.nextGirlPrep && (
+                  <p className="text-[11px] text-[#8A2C3E] leading-relaxed bg-[#FFF0F3] py-3 px-4 rounded-xl mt-3 font-medium">
+                    {gist.nextGirlPrep}
+                  </p>
+                )}
+              </>
+            )}
           </div>
         )}
 
@@ -701,7 +814,7 @@ function HomeContent() {
 
       <InstallHint />
 
-      {/* SAFETY NOTE - SMALL, GREY, COLLAPSED */}
+      {/* SAFETY NOTE */}
       {isLate && (
         <div className="w-full max-w-sm mb-6">
           <button 
@@ -727,7 +840,7 @@ function HomeContent() {
         </div>
       )}
 
-      {/* --- MODALS START HERE --- */}
+      {/* --- MODALS --- */}
 
       {/* NIGHT CHECK MODAL */}
       {showNightCheck && (
@@ -776,9 +889,7 @@ function HomeContent() {
                       if (dailyCheck.checkType === 'walk') saveState({ walk: true });
                       else if (dailyCheck.checkType === 'sleep') saveState({ sleep: true });
                       else if (dailyCheck.checkType === 'calm') saveState({ calm: true });
-                      setShowCheckModal(false);
-                      setShowWinCelebration(true);
-                      setTimeout(() => setShowWinCelebration(false), 2500);
+                      setCheckStep('success');
                       logEvent('circle_closed', { circle: dailyCheck.checkType, day: cycleData.currentDay, feeling: 'full' });
                     }}
                     className="w-full bg-[#9CAF88] text-white py-3.5 rounded-xl font-bold active:scale-95 shadow-md text-sm"
@@ -839,12 +950,14 @@ function HomeContent() {
               </div>
             )}
 
-            {checkStep === 'refused' && (
+            {checkStep === 'success' && (
               <div className="flex flex-col items-center animate-fade-in">
-                <div className="w-12 h-12 rounded-full bg-[#FFF0F3] flex items-center justify-center mb-4 text-2xl">🌙</div>
-                <h3 className="text-lg font-bold text-[#4A2C35] mb-2">It's okay.</h3>
+                <div className="w-16 h-16 rounded-full bg-[#9CAF88]/20 flex items-center justify-center mb-6">
+                  <span className="text-3xl text-[#9CAF88] font-bold">✓</span>
+                </div>
+                <h3 className="text-2xl font-serif text-[#4A2C35] italic mb-2">You did well.</h3>
                 <p className="text-sm text-[#4A2C35]/70 mb-6 leading-relaxed px-2">
-                  Thank you for checking in. I am still here with you. Tomorrow is a new day. Rest now.
+                  Thank you for checking in. Ovi is proud of you.
                 </p>
                 <button 
                   onClick={() => setShowCheckModal(false)}
@@ -859,18 +972,116 @@ function HomeContent() {
         </div>
       )}
 
+      {/* FOOD LOG MODAL */}
       {activeModal === 'food' && (
         <div className="fixed inset-0 bg-[#4A2C35]/20 backdrop-blur-sm z-50 flex items-center justify-center p-6 animate-fade-in">
           <div className="w-full max-w-sm bg-white rounded-3xl p-6 shadow-2xl animate-slide-up text-center">
-            <h3 className="text-lg font-bold mb-3 text-[#4A2C35] leading-snug">Did you eat a balanced plate today before 9pm?</h3>
-            <div className="bg-[#FFF0F3] border border-[#FFB3C1]/30 rounded-2xl p-4 mb-5">
-              <p className="text-xs text-[#4A2C35]/80 italic">"{oviGists[girl.id as PhaseId]?.food || 'Food is medicine.'}"</p>
-            </div>
-            <div className="flex flex-col gap-2">
-              <button onClick={() => { saveState({ food: true }); setActiveModal(null); setShowWinCelebration(true); setTimeout(() => setShowWinCelebration(false), 2500); logEvent('circle_closed', { circle: 'food', day: cycleData.currentDay, feeling: 'full' }); }} className="w-full bg-[#9CAF88] text-white py-3.5 rounded-xl font-bold active:scale-95">I gave my body what it needed ✅</button>
-              <button onClick={() => { setActiveModal(null); setCheckStep('grace'); setShowCheckModal(true); }} className="w-full bg-[#FFF0F3] text-[#4A2C35] border border-[#4A2C35]/10 py-3.5 rounded-xl font-bold active:scale-95 text-sm">I tried a little 🤍</button>
-              <button onClick={() => { setActiveModal(null); setCheckStep('refused'); setShowCheckModal(true); }} className="w-full bg-white border border-transparent text-[#4A2C35]/40 py-2 text-xs font-medium active:scale-95">Not today, but I am still here</button>
-            </div>
+            
+            {foodLogStep === 'select' && (
+              <>
+                <h3 className="text-lg font-bold mb-3 text-[#4A2C35] leading-snug">What did you eat today?</h3>
+                <p className="text-xs text-[#4A2C35]/60 mb-5 leading-relaxed">
+                  A balanced plate with protein and veg keeps your sugar steady.
+                </p>
+                <div className="flex flex-col gap-2">
+                  {topCarbs.map((food) => (
+                    <button 
+                      key={food.name}
+                      onClick={() => handleFoodSelect(food)}
+                      className="w-full bg-[#FFF0F3] text-[#4A2C35] border border-[#4A2C35]/10 py-3 rounded-xl font-bold active:scale-95 text-sm"
+                    >
+                      {food.name}
+                    </button>
+                  ))}
+                  <button 
+                    onClick={() => setFoodLogStep('custom')}
+                    className="w-full bg-white text-[#4A2C35]/60 border border-[#4A2C35]/10 py-3 rounded-xl font-bold active:scale-95 text-sm"
+                  >
+                    Other...
+                  </button>
+                  <button 
+                    onClick={() => {
+                      setShowCheckModal(false);
+                      setActiveModal(null);
+                    }}
+                    className="w-full bg-white border border-transparent text-[#4A2C35]/40 py-2 text-xs font-medium active:scale-95 mt-2"
+                  >
+                    Skip for now
+                  </button>
+                </div>
+              </>
+            )}
+
+            {foodLogStep === 'custom' && (
+              <>
+                <h3 className="text-lg font-bold mb-3 text-[#4A2C35] leading-snug">What did you eat?</h3>
+                <p className="text-xs text-[#4A2C35]/60 mb-5 leading-relaxed">
+                  Type it here. I will help you balance it.
+                </p>
+                <input 
+                  type="text"
+                  value={customFood}
+                  onChange={(e) => setCustomFood(e.target.value)}
+                  placeholder="e.g. Egusi soup and pounded yam"
+                  className="w-full bg-[#FFF0F3] border border-[#4A2C35]/10 text-[#4A2C35] p-3 rounded-xl text-sm focus:outline-none focus:border-[#FF8FA3] mb-3"
+                />
+                <button 
+                  onClick={handleCustomFood}
+                  className="w-full bg-[#4A2C35] text-white py-3.5 rounded-xl font-bold active:scale-95 shadow-md text-sm mb-2"
+                >
+                  Continue
+                </button>
+                <button 
+                  onClick={() => setFoodLogStep('select')}
+                  className="w-full bg-white border border-transparent text-[#4A2C35]/40 py-2 text-xs font-medium active:scale-95"
+                >
+                  Back to list
+                </button>
+              </>
+            )}
+
+            {foodLogStep === 'fix' && selectedFoodName && (
+              <>
+                <h3 className="text-lg font-bold mb-3 text-[#4A2C35] leading-snug">Ah, {selectedFoodName}.</h3>
+                <p className="text-xs text-[#4A2C35]/60 mb-5 leading-relaxed">
+                  {selectedFoodFix}
+                </p>
+                <div className="flex flex-col gap-2">
+                  <button 
+                    onClick={() => handleFoodFix(true)}
+                    className="w-full bg-[#9CAF88] text-white py-3.5 rounded-xl font-bold active:scale-95 shadow-md text-sm"
+                  >
+                    Yes, I added protein/veg ✅
+                  </button>
+                  <button 
+                    onClick={() => handleFoodFix(false)}
+                    className="w-full bg-[#FFF0F3] text-[#4A2C35] border border-[#4A2C35]/10 py-3.5 rounded-xl font-bold active:scale-95 text-sm"
+                  >
+                    No, I ate it alone 🤍
+                  </button>
+                </div>
+              </>
+            )}
+
+            {foodLogStep === 'done' && (
+              <div className="flex flex-col items-center">
+                <div className="w-12 h-12 rounded-full bg-[#9CAF88]/20 flex items-center justify-center mb-4 text-2xl">✓</div>
+                <h3 className="text-lg font-bold text-[#4A2C35] mb-2">Logged.</h3>
+                <p className="text-sm text-[#4A2C35]/70 mb-2">Thank you for checking in.</p>
+                <p className="text-xs text-[#4A2C35]/50 mb-6">Ovi is proud of you.</p>
+                <button 
+                  onClick={() => {
+                    setActiveModal(null);
+                    setShowWinCelebration(true);
+                    setTimeout(() => setShowWinCelebration(false), 2500);
+                  }}
+                  className="w-full bg-[#4A2C35] text-white py-3.5 rounded-xl font-bold active:scale-95 shadow-md text-sm"
+                >
+                  Okay, Ovi
+                </button>
+              </div>
+            )}
+
           </div>
         </div>
       )}

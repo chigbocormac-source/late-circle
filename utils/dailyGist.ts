@@ -3,6 +3,8 @@ export interface GistData {
   message: string;
   action: string;
   badge: string | null;
+  recommendation?: string;
+  nextGirlPrep?: string;
 }
 
 const LIBRARY: Record<number, Record<string, { title: string; message: string; action: string }[]>> = {
@@ -158,8 +160,7 @@ const LIBRARY: Record<number, Record<string, { title: string; message: string; a
 };
 
 // LATE TRACK - CALM + CLEAR
-// No scary language. No clinic commands. Only Ovi's voice.
-const LATE_TRACK: { title: string; message: string; action: string }[] = [
+const LATE_TRACK: { title: string; message: string; action: string; recommendation?: string }[] = [
   {
     title: "Still waiting with you.",
     message: "Your cycle is taking longer than your pattern. That happens sometimes. It does not mean your body is broken. We will watch it together, one day at a time.",
@@ -229,14 +230,12 @@ export function getDailyGist(
   
   let badge = `Day ${cycleDay}`;
   
-  // LATE GIRL FIX: If she is late, she is not "Ready Girl". She is "Late Girl" or just "Waiting with you".
   if (lateDays > 0) {
     badge = `Day ${cycleDay} • Waiting with you`;
     
     const i = Math.min(lateDays, LATE_TRACK.length) - 1;
     let content = LATE_TRACK[i];
     
-    // If she is not sexually active, skip the pregnancy message
     if (i === 0 && !isSexuallyActive) content = LATE_TRACK[1];
     
     return { ...content, badge };
@@ -249,14 +248,61 @@ export function getDailyGist(
   const content = list[pickIndex(dayInPhase, length, list.length)];
 
   let message = content.message;
-  if ((id === 'fine' || id === 'chop') && lastFood) {
-    message = `I saw you ate ${lastFood} yesterday. ${message}`;
+  let recommendation = undefined;
+  let nextGirlPrep = undefined;
+
+  // THE HEALING FOOD RECOMMENDATIONS
+  if (id === 'fine' || id === 'chop') {
+    if (lastFood) {
+      message = `I saw you ate ${lastFood} yesterday. ${message}`;
+    }
+    
+    const recommendations = [
+      "Try this plate: Rice + Beans + Fish. The protein and fiber slow the sugar spike.",
+      "Try this plate: Eba + Egusi + Fish. The soup and fish keep you full and steady.",
+      "Try this plate: Yam + Egg + Vegetables. The egg and veg balance the starch.",
+      "Try this plate: Bread + Egg + Tomato. A quick snack becomes a real meal.",
+      "Try this plate: Indomie + Egg + Spinach. The protein and iron keep your energy steady.",
+      "Try this plate: Plantain + Beans + Fish. The beans and fish slow the sugar spike."
+    ];
+    recommendation = recommendations[dayInPhase % recommendations.length];
+  }
+
+  if (id === 'rest') {
+    recommendation = "Try this: Ugu or beans with tomato or orange. The vitamin C helps your body absorb iron.";
+  }
+
+  if (id === 'fresh') {
+    recommendation = "Try this: A 20-minute walk after your biggest meal. It helps your body use sugar better.";
+  }
+
+  if (id === 'ready') {
+    recommendation = "Try this: 90 seconds of deep breathing. It tells your body it is safe to release.";
+  }
+
+  // THE PREP FOR TOMORROW
+  if (id === 'rest') {
+    nextGirlPrep = "Tomorrow you will feel lighter. Take a short walk to the junction and back. Eat something with protein, like egg or beans, so your energy stays steady.";
+  }
+  if (id === 'fresh') {
+    nextGirlPrep = "Tomorrow your energy will go up. Wear something you feel beautiful in. If you eat rice tomorrow, add chicken or fish, so you don't crash after.";
+  }
+  if (id === 'fine') {
+    nextGirlPrep = "Tomorrow you will feel hungry. That is your body asking for fuel. If you want Indomie, add egg and vegetables. Don't eat it alone. Drink water before you eat anything sweet.";
+  }
+  if (id === 'chop') {
+    nextGirlPrep = "Tomorrow your body will slow down. Plan a quiet evening. Keep a pad in your bag. Eat warm soup tomorrow, like pepper soup or eba with egusi, and go to bed early.";
+  }
+  if (id === 'ready') {
+    nextGirlPrep = "Your period might come tomorrow. Rest well tonight. Keep a pad in your bag. Eat something warm, like pap and akara or rice and stew, and sleep early. Don't stress yourself.";
   }
 
   return {
     title: content.title,
     message: message,
     action: content.action,
-    badge: badge
+    badge: badge,
+    recommendation: recommendation,
+    nextGirlPrep: nextGirlPrep
   };
 }
