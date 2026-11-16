@@ -4,21 +4,23 @@ import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '../supabase';
 import { getCyclePhase, oviGists, PhaseId, oviWelcome, getMorningGreeting, getRealCycleLength, getLateBoundary } from '../../utils/cycleEngine';
+import { getDailyGist } from '../../utils/dailyGist';
 import InstallHint from '../components/InstallHint';
 import { trackAppOpened, logEvent, localDateKey } from '../../utils/analytics';
 import { subscribeToPush } from '../../utils/push';
 import { getClaimCopy } from '../../utils/claimCopy';
 import { getWorryForTags } from '../../utils/worryBubble';
 
-// --- THE HEALING MATRIX ---
+// --- THE HEALING MATRIX (Fixed: 4 Girls only) ---
 function getDailyCheck(cycleDay: number, averageCycle: number, girlId: string) {
   const percentage = (cycleDay / averageCycle) * 100;
-  if (percentage > 100) return { girlName: 'Ready Girl', checkType: 'calm', question: 'Did you do 90 seconds of calm today?' };
-  if (percentage <= 15) return { girlName: 'Rest Girl', checkType: 'sleep', question: 'Did you sleep before 10:30pm last night?' };
-  if (percentage <= 35) return { girlName: 'Fresh Girl', checkType: 'walk', question: 'Did you walk for 20 minutes after eating today?' };
-  if (percentage <= 60) return { girlName: 'Fine Girl', checkType: 'food', question: 'What did you eat today?' };
-  if (percentage <= 80) return { girlName: 'Chop Girl', checkType: 'food', question: 'What did you eat today?' };
-  return { girlName: 'Ready Girl', checkType: 'calm', question: 'Did you do 90 seconds of calm today?' };
+  
+  if (percentage > 100) return { girlName: 'Ready Girl', checkType: 'calm', question: 'Did you take a moment for yourself today?' };
+  if (percentage <= 15) return { girlName: 'Rest Girl', checkType: 'sleep', question: 'Did you rest well last night?' };
+  if (percentage <= 35) return { girlName: 'Fresh Girl', checkType: 'walk', question: 'Did you move your body today?' };
+  if (percentage <= 75) return { girlName: 'Chop Girl', checkType: 'food', question: 'Did you eat well today?' };
+  
+  return { girlName: 'Ready Girl', checkType: 'calm', question: 'Did you take a moment for yourself today?' };
 }
 
 function getCycleData(lastPeriodDateString: string | null, cycleLengths: number[] = []) {
@@ -93,7 +95,7 @@ function HomeContent() {
   const [showPeriodCame, setShowPeriodCame] = useState(false);
 
   const [showBleedingModal, setShowBleedingModal] = useState(false);
-  const [hasLoggedBleedingToday, setHasLoggedBleedingToday] = useState(false); 
+  const [hasLoggedBleedingToday, setHasLoggedBleedingToday] = useState(false);
   const [bleedingData, setBleedingData] = useState({
     flow: '',
     pain: 5,
@@ -102,6 +104,10 @@ function HomeContent() {
     color: '',
     meds: '',
   });
+
+  const [showCheckModal, setShowCheckModal] = useState(false);
+  const [checkStep, setCheckStep] = useState<'ask' | 'grace' | 'refused'>('ask');
+  const [showNightCheck, setShowNightCheck] = useState(false);
 
   useEffect(() => {
     const onboarded = localStorage.getItem('lateCircleOnboarded');
@@ -150,12 +156,10 @@ function HomeContent() {
     const savedNightClosed = localStorage.getItem('lateCircleNightClosed');
     if (savedNightClosed === 'true') setIsNightClosed(true);
 
-    // CHECK IF ALREADY LOGGED BLEEDING TODAY
     const lastBleedDate = localStorage.getItem('lateCircleLastBleedDate');
     if (lastBleedDate === localDateKey()) {
       setHasLoggedBleedingToday(true);
     }
-    
 
     const promised = localStorage.getItem('lateCirclePromised7Days');
     const commitDate = localStorage.getItem('lateCircleCommitDate');
@@ -205,7 +209,13 @@ function HomeContent() {
     }
 
     setTodayStr(new Date().toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }));
-    setNowHour(new Date().getHours());
+    const currentHour = new Date().getHours();
+    setNowHour(currentHour);
+
+    const nightCheckDone = localStorage.getItem('lateCircleNightCheckDone');
+    if (currentHour >= 20 && nightCheckDone !== localDateKey()) {
+      setTimeout(() => setShowNightCheck(true), 2000);
+    }
     
     async function fetchFoods() {
       const { data, error } = await supabase.from('foods').select('*').order('name');
@@ -216,13 +226,20 @@ function HomeContent() {
     
     trackAppOpened(cycleDataForPhase.currentDay);
         
-    const pushAsked = localStorage.getItem('lateCirclePushAsked');
-    if (!pushAsked && 'Notification' in window) {
-      setTimeout(() => setShowPushPrompt(true), 3000);
-    }
-
     setIsLoaded(true);
   }, [router]);
+
+  useEffect(() => {
+    if (isLoaded && circles && !localStorage.getItem('lateCirclePushAsked')) {
+      const todayCheck = getDailyCheck(getCycleData(lastPeriodDate, [realCycleLength]).currentDay, realCycleLength, 'rest');
+      const isDoneToday = circles[todayCheck.checkType as keyof typeof circles];
+      
+      if (isDoneToday) {
+        const t = setTimeout(() => setShowPushPrompt(true), 3000);
+        return () => clearTimeout(t);
+      }
+    }
+  }, [circles, isLoaded, lastPeriodDate, realCycleLength]);
 
   useEffect(() => {
     if (!searchParams) return;
@@ -282,6 +299,22 @@ function HomeContent() {
 
   const copy = getClaimCopy(lateDays);
 
+  // PULL REAL-TIME DATA FOR THE GIST
+  const savedTags = typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('lateCircleTags') || '[]') : [];
+  const savedFood = typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('lateCircleLastFoodLog') || 'null')?.name : null;
+  
+  const userCycleType = typeof window !== 'undefined' ? localStorage.getItem('lateCircleType') || 'Regular' : 'Regular';
+  const userSexuallyActive = typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('lateCircleYouPlace') || 'null')?.sexuallyActive === 'Yes' : false;
+  
+  const gist = getDailyGist(
+    cycleData.currentDay, 
+    cycleData.average, 
+    cycleData.lateDays, 
+    savedTags, 
+    savedFood,
+    userSexuallyActive // <-- PASSED IN
+  );
+
   const saveState = (updates: Partial<typeof circles>) => {
     const stored = localStorage.getItem('lateCircleData');
     const current = stored ? JSON.parse(stored) : circles;
@@ -292,11 +325,11 @@ function HomeContent() {
     localStorage.setItem('lateCircleDataDate', localDateKey());
 
     const today = localDateKey();
-    const closedCount = [newState.food, newState.walk, newState.sleep, newState.calm].filter(Boolean).length;
+    const checkedIn = Object.values(newState).some(Boolean) ? 1 : 0;
     
     let history = JSON.parse(localStorage.getItem('lateCircleDailyHistory') || '{}');
     history[today] = {
-      count: closedCount,
+      count: checkedIn,
       food: newState.food,
       walk: newState.walk,
       sleep: newState.sleep,
@@ -344,25 +377,10 @@ function HomeContent() {
       });
     }
     
-    localStorage.setItem('lateCircleLastBleedDate', localDateKey()); // <--- SAVE DATE
-    setHasLoggedBleedingToday(true); // <--- HIDE INSTANTLY
+    localStorage.setItem('lateCircleLastBleedDate', localDateKey());
+    setHasLoggedBleedingToday(true);
     setShowBleedingModal(false);
     logEvent('bleeding_logged', { flow: bleedingData.flow, pain: bleedingData.pain });
-  };
-
-  const completeCircle = (circle: 'food' | 'sleep' | 'calm') => {
-    saveState({ [circle]: true });
-    setActiveModal(null); 
-    setShowFoodDetails(false);
-    setCalmView(null);
-    logEvent('circle_closed', { circle, day: cycleData.currentDay });
-  };
-
-  const handleWalk = () => {
-    saveState({ walk: true });
-    setShowWinCelebration(true);
-    setTimeout(() => setShowWinCelebration(false), 2500);
-    logEvent('circle_closed', { circle: 'walk', day: cycleData.currentDay });
   };
 
   const handleClaim = () => {
@@ -389,76 +407,9 @@ function HomeContent() {
   const isWalkDone = circles.walk;
   const closedCount = [circles.food, isWalkDone, circles.sleep, circles.calm].filter(Boolean).length;
 
-  // SVG Ring Math
-  const ringRadius = 110; 
+  const ringRadius = 78; 
   const circleCircumference = 2 * Math.PI * ringRadius;
   const strokeDashoffset = isDone ? 0 : circleCircumference;
-
-  const filteredFoods = dbFoods.filter(f => {
-    if (searchQuery.trim() === '') return true; 
-    const foodName = f.name.toLowerCase();
-    const search = searchQuery.toLowerCase().trim();
-    return foodName.includes(search);
-  });
-
-  const toggleFoodSelection = (food: Food) => {
-    if (selectedFoods.find(f => f.id === food.id)) {
-      setSelectedFoods(selectedFoods.filter(f => f.id !== food.id));
-    } else {
-      setSelectedFoods([...selectedFoods, food]);
-      logEvent('food_search_used', {
-        query: searchQuery.trim() || null,
-        food: food.name,
-        score: food.score,
-      });
-    }
-  };
-
-  let plateScore: 'Green' | 'Yellow' | 'Red' = 'Green';
-  let plateFix = "This is a good choice. It will keep your sugar steady.";
-
-  if (selectedFoods.length > 0) {
-    const hasRed = selectedFoods.some(f => f.score === 'Red');
-    if (hasRed) {
-      plateScore = 'Red';
-      plateFix = selectedFoods.find(f => f.score === 'Red')?.fix || "Add protein to make it Green.";
-    } else if (selectedFoods.length > 1) {
-      plateScore = 'Green';
-    } else {
-      plateScore = selectedFoods[0].score;
-      plateFix = selectedFoods[0].fix;
-    }
-  }
-
-  const logFood = (didAddFix: boolean) => {
-    if (selectedFoods.length === 0) return;
-    const currentHour = new Date().getHours();
-    let finalScore = plateScore;
-    if (didAddFix) finalScore = 'Green';
-
-    const newLog = {
-      name: selectedFoods.map(f => f.name).join(' + '),
-      score: finalScore,
-      time: currentHour >= 12 ? `${currentHour === 12 ? 12 : currentHour - 12} PM` : `${currentHour === 0 ? 12 : currentHour} AM`
-    };
-    localStorage.setItem('lateCircleLastFoodLog', JSON.stringify(newLog));
-
-    setActiveModal(null);
-    setShowFoodDetails(false);
-    setShowFoodLog(false);
-    setSearchQuery(''); 
-    setSelectedFoods([]); 
-
-    saveState({ food: true });
-    setShowWinCelebration(true);
-    setTimeout(() => setShowWinCelebration(false), 2500);
-    logEvent('circle_closed', { circle: 'food', day: cycleData.currentDay });
-  };
-
-  const openCalmMenu = () => {
-    setActiveModal('calm');
-    setCalmView('menu');
-  };
 
   if (!isLoaded) return <div className="h-screen w-full bg-[#FFF0F3]" />;
 
@@ -480,21 +431,27 @@ function HomeContent() {
   ];
   const claimDayText = lateDays < 1 ? claimMessages[0] : lateDays > 14 ? claimMessages[13] : claimMessages[lateDays - 1];
 
-  return (
-    <main className={`h-screen overflow-y-auto flex flex-col items-center pt-12 pb-32 px-6 font-sans relative animate-page-enter transition-colors duration-500 ${isLate ? 'bg-[#FFE5EC]' : 'bg-[#FFF0F3]'} text-[#4A2C35]`}>
-      
-      {/* THE APP NAME (Now at the very top) */}
-      <h2 className="text-[11px] font-bold text-[#4A2C35]/30 uppercase tracking-[0.3em] mb-8 mt-2">
-        Late Circle
-      </h2>
+  const nextPhase = (() => {
+    for (let d = 1; d <= 10; d++) {
+      const g = getDailyCheck(cycleData.currentDay + d, cycleData.average, girl.id).girlName;
+      if (g !== dailyCheck.girlName) return { days: d, name: g };
+    }
+    return null;
+  })();
 
+  const tomorrowCheck = getDailyCheck(cycleData.currentDay + 1, cycleData.average, girl.id);
+  const tomorrowSame = tomorrowCheck.girlName === dailyCheck.girlName;
+
+  return (
+    <main className={`h-screen overflow-y-auto flex flex-col items-center pt-12 pb-40 px-6 font-sans relative animate-page-enter transition-colors duration-500 ${isLate ? 'bg-[#FFE5EC]' : 'bg-[#FFF0F3]'} text-[#4A2C35]`}>
+      
       {showWinCelebration && (
         <div className="absolute inset-0 z-200 flex flex-col items-center justify-center bg-[#FFF0F3]/95 backdrop-blur-md animate-fade-in">
           <div className="w-32 h-32 rounded-full bg-[#9CAF88] flex items-center justify-center mb-6 animate-pop-in shadow-[0_0_60px_rgba(156,175,136,0.3)]">
             <span className="text-7xl text-white font-bold">✓</span>
           </div>
           <h2 className="text-3xl font-bold text-[#4A2C35] mb-2 animate-slide-up-slow">You did well.</h2>
-          <p className="text-sm text-[#4A2C35]/60 animate-slide-up-slow">Circle closed Green 💚</p>
+          <p className="text-sm text-[#4A2C35]/60 animate-slide-up-slow">You checked in today 💚</p>
         </div>
       )}
 
@@ -536,7 +493,7 @@ function HomeContent() {
               "{oviWelcome[girl.id as PhaseId]}"
             </p>
             <div className="bg-[#FFF0F3] border border-[#4A2C35]/10 rounded-2xl p-4 mb-6 w-full text-left">
-              <h4 className="text-[10px] font-bold text-[#4A2C35]/40 uppercase tracking-widest mb-2">Your circle today</h4>
+              <h4 className="text-[10px] font-bold text-[#4A2C35]/40 uppercase tracking-widest mb-2">Your check today</h4>
               <p className="text-sm font-bold text-[#4A2C35] capitalize">
                 {dailyCheck.checkType}
               </p>
@@ -548,7 +505,6 @@ function HomeContent() {
         </div>
       )}
 
-      {/* PUSH PROMPT (Now at the top) */}
       {showPushPrompt && (
         <div className="w-full max-w-sm bg-white border border-[#9CAF88]/30 rounded-2xl p-4 mb-6 shadow-sm animate-slide-down mt-2">
           <h3 className="text-sm font-bold text-[#4A2C35] mb-1">Ovi wants to check on you.</h3>
@@ -567,17 +523,27 @@ function HomeContent() {
       )}
 
       {/* --- THE TAPPABLE CIRCLE DASHBOARD --- */}
-      <div className="w-full max-w-sm flex flex-col items-center animate-fade-in mt-2 mb-8">
-      
-
+      <div className="w-full max-w-sm flex flex-col items-center animate-fade-in mt-2 mb-4">
+        
         {/* 1. The Girl (Top) */}
-        <div className="text-center mb-8 w-full flex flex-col items-center">
-          <p className="text-[10px] font-bold text-[#9CAF88] uppercase tracking-[0.2em] mb-2">
-            Good morning, Fine Girl
-          </p>
-          <h1 className="text-2xl font-serif text-[#4A2C35] italic">
+        <div className="text-center mb-4 w-full flex flex-col items-center">
+          
+          <h1 className="text-2xl font-serif text-[#4A2C35] italic mb-3">
             Today you are <span className="text-[#FF8FA3] font-bold not-italic">{dailyCheck.girlName}</span>
           </h1>
+
+          {morningGreeting && (
+            <p className="text-xs text-[#4A2C35]/60 font-medium px-4 leading-relaxed mb-3">
+              {morningGreeting}
+            </p>
+          )}
+
+          {promiseDay && (
+            <p className="text-[10px] font-bold text-[#FF8FA3] bg-[#FFF0F3] px-3 py-1 rounded-full">
+              Day {promiseDay} of 7 🌱
+            </p>
+          )}
+          
         </div>
 
         {/* 2. The Tappable Circle (Center) */}
@@ -588,31 +554,20 @@ function HomeContent() {
                 setActiveModal('food');
                 setShowFoodDetails(false);
                 setShowFoodLog(false);
-              } else if (dailyCheck.checkType === 'walk') {
-                saveState({ walk: true });
-                setShowWinCelebration(true);
-                setTimeout(() => setShowWinCelebration(false), 2500);
-                logEvent('circle_closed', { circle: 'walk', day: cycleData.currentDay });
-              } else if (dailyCheck.checkType === 'sleep') {
-                saveState({ sleep: true });
-                setShowWinCelebration(true);
-                setTimeout(() => setShowWinCelebration(false), 2500);
-                logEvent('circle_closed', { circle: 'sleep', day: cycleData.currentDay });
-              } else if (dailyCheck.checkType === 'calm') {
-                setActiveModal('calm');
-                setCalmView('menu');
+              } else {
+                setCheckStep('ask');
+                setShowCheckModal(true);
               }
             }
           }}
-          className={`relative flex flex-col items-center justify-center w-72 h-72 rounded-full transition-all duration-500 active:scale-95 ${isDone ? 'cursor-default' : 'cursor-pointer'}`}
-        >
+          className={`relative flex flex-col items-center justify-center w-52 h-52 rounded-full transition-all duration-500 active:scale-95 ${isDone ? 'cursor-default' : 'cursor-pointer shadow-[0_20px_50px_-12px_rgba(255,143,163,0.3)] animate-orb-breathe'}`}        >
           <div className={`absolute inset-0 rounded-full shadow-[0_12px_40px_-12px_rgba(74,44,53,0.15)] ${isDone ? 'bg-[#9CAF88]' : 'bg-white border border-[#4A2C35]/5'}`}></div>
           
-          <svg className="absolute inset-0 transform -rotate-90" width="288" height="288" viewBox="0 0 288 288">
-            <circle cx="144" cy="144" r={ringRadius} fill="transparent" stroke="rgba(74, 44, 53, 0.05)" strokeWidth="12" />
+          <svg className="absolute inset-0 transform -rotate-90" width="208" height="208" viewBox="0 0 208 208">
+            <circle cx="104" cy="104" r={ringRadius} fill="transparent" stroke="rgba(74, 44, 53, 0.05)" strokeWidth="8" />
             <circle
-              cx="144" cy="144" r={ringRadius} fill="transparent"
-              stroke={isLate ? "#FF8FA3" : "#9CAF88"} strokeWidth="12"
+              cx="104" cy="104" r={ringRadius} fill="transparent"
+              stroke={isLate ? "#FF8FA3" : "#9CAF88"} strokeWidth="8"
               strokeDasharray={circleCircumference} strokeDashoffset={strokeDashoffset}
               strokeLinecap="round" className="transition-all duration-1000 ease-out"
             />
@@ -624,61 +579,91 @@ function HomeContent() {
                 <div className="w-20 h-20 rounded-full bg-white/20 flex items-center justify-center mb-3">
                   <span className="text-5xl text-white font-bold">✓</span>
                 </div>
-                <p className="text-xl font-bold text-white">You won today.</p>
+                <p className="text-xl font-bold text-white">You checked in.</p>
                 <p className="text-sm text-white/80 mt-1">Rest now 💚</p>
               </div>
             ) : (
               <>
-                <h3 className="text-[10px] font-bold text-[#8A2C3E] uppercase tracking-widest mb-3">
+                <h3 className="text-[10px] font-bold text-[#8A2C3E] uppercase tracking-widest mb-2">
                   Your One Check
                 </h3>
-                <p className="text-[15px] font-bold text-[#4A2C35] leading-snug">
+                <p className="text-[14px] font-bold text-[#4A2C35] leading-snug mb-4 px-2">
                   {dailyCheck.question}
                 </p>
-                <div className="mt-4 px-4 py-2 rounded-full bg-[#FFF0F3] text-[#8A2C3E] text-[10px] font-bold uppercase tracking-widest animate-pulse">
-                  Tap to close
+                
+                <div className="px-5 py-2.5 rounded-full bg-[#FF8FA3] text-white text-[10px] font-bold uppercase tracking-widest shadow-[0_4px_16px_rgba(255,143,163,0.4)] animate-pulse">
+                  Check In
                 </div>
               </>
             )}
           </div>
         </button>
 
-        {/* 3. The Gist (Bottom) */}
-        <div className="w-full px-2 text-center mt-8 mb-8 animate-fade-in">
-          <p className="text-[11px] font-bold text-[#9CAF88] uppercase tracking-widest mb-1">Today's Gist</p>
+        {/* 3. The Real-Time Gist (Dynamic) */}
+        <div className="w-full px-2 text-center mt-6 mb-6 animate-fade-in flex flex-col items-center">
+          
+          {/* The Badge */}
+          <span className="text-[10px] font-bold text-[#9CAF88] uppercase tracking-widest mb-2 bg-white/50 px-3 py-1 rounded-full">
+            {gist.badge}
+          </span>
+
+          <p className="text-[11px] font-bold text-[#9CAF88] uppercase tracking-widest mb-1">Message from Ovi</p>
           <p className="text-sm text-[#4A2C35] font-bold mb-1">
-            {dailyCheck.checkType === 'food' ? "Why your food pairing matters." 
-             : dailyCheck.checkType === 'sleep' ? "Why sleep is your medicine."
-             : dailyCheck.checkType === 'walk' ? "Why movement wakes up your blood."
-             : "Why stress holds your period."}
+            {gist.title}
           </p>
-          <p className="text-xs text-[#4A2C35]/60 leading-relaxed">
-            {dailyCheck.checkType === 'food' ? "Eating Indomie alone spikes your sugar. Add egg or veg to heal."
-             : dailyCheck.checkType === 'sleep' ? "Your body heals while you sleep. Late scrolling keeps hormones confused."
-             : dailyCheck.checkType === 'walk' ? "Walking after you eat tells your body to use food for energy, not store it."
-             : "Stress holds your period. 90 seconds of calm tells your brain you are safe."}
+          <p className="text-xs text-[#4A2C35]/60 leading-relaxed mb-4">
+            {gist.message}
           </p>
+          <div className="bg-[#FFF0F3] border border-[#FFB3C1]/30 rounded-xl p-3 inline-block">
+            <p className="text-xs text-[#8A2C3E] font-medium italic">
+              "{gist.action}"
+            </p>
+          </div>
         </div>
 
-        {/* 4. The Rest (Only shows AFTER she does her check) */}
-        {isDone && (
-          <div className="w-full animate-fade-in">
-            {cycleData.currentDay >= 1 && cycleData.currentDay <= 7 && !hasLoggedBleedingToday && (
-              <div className="w-full bg-[#FFE5EC] border border-[#FF8FA3]/30 rounded-3xl p-5 mb-4 shadow-sm">
-                <div className="flex items-center justify-between mb-2">
-                  <h2 className="text-sm font-bold text-[#8A2C3E] flex items-center gap-2">
-                    <span className="text-lg">🩸</span> Bleeding Mode
-                  </h2>
-                </div>
-                <p className="text-xs text-[#8A2C3E]/70 mb-3 leading-relaxed">
-                  You are bleeding today. Let's check in small small.
-                </p>
-                <button onClick={() => setShowBleedingModal(true)} className="w-full bg-[#FF8FA3] text-white py-2.5 rounded-full font-bold text-xs shadow-sm active:scale-95 transition-transform">
-                  Log My Flow & Pain →
-                </button>
-              </div>
-            )}
+        {/* 4. The Bleeding Card */}
+        {isDone && cycleData.currentDay >= 1 && cycleData.currentDay <= 7 && !hasLoggedBleedingToday && (
+          <div className="w-full animate-fade-in bg-[#FFE5EC] border border-[#FF8FA3]/30 rounded-3xl p-5 mb-4 shadow-sm">
+            <div className="flex items-center justify-between mb-2">
+              <h2 className="text-sm font-bold text-[#8A2C3E] flex items-center gap-2">
+                <span className="text-lg">🩸</span> Bleeding Mode
+              </h2>
+            </div>
+            <p className="text-xs text-[#8A2C3E]/70 mb-3 leading-relaxed">
+              You are bleeding today. Let's check in small small.
+            </p>
+            <button onClick={() => setShowBleedingModal(true)} className="w-full bg-[#FF8FA3] text-white py-2.5 rounded-full font-bold text-xs shadow-sm active:scale-95 transition-transform">
+              Log My Flow & Pain →
+            </button>
           </div>
+        )}
+
+        {/* 5. The Tomorrow Teaser */}
+        {isDone && (
+          <div className="w-full bg-white rounded-2xl p-4 mb-4 text-center shadow-sm animate-fade-in">
+            <p className="text-[10px] font-bold text-[#9CAF88] uppercase tracking-widest mb-1">Tomorrow</p>
+            <p className="text-sm font-bold text-[#4A2C35] mb-1">
+              {tomorrowSame ? "I will check on your rest again." : `You become ${tomorrowCheck.girlName}.`}
+            </p>
+            <p className="text-xs text-[#4A2C35]/60 leading-relaxed">
+              {tomorrowSame 
+                ? `Tonight: bed by 10:30. ${nextPhase ? `${nextPhase.name} arrives in ${nextPhase.days} day${nextPhase.days > 1 ? 's' : ''}.` : ''}` 
+                : `Ovi will ask: "${tomorrowCheck.question}"`}
+            </p>
+          </div>
+        )}
+
+        {/* 6. The Optional Calm Button */}
+        {isDone && !circles.calm && dailyCheck.checkType !== 'calm' && (
+          <button 
+            onClick={() => {
+              setActiveModal('calm');
+              setCalmView('menu');
+            }}
+            className="w-full bg-[#FFF0F3] border border-[#9CAF88]/30 py-3 rounded-2xl text-xs font-bold text-[#9CAF88] mb-4 shadow-sm active:scale-95 transition-transform flex items-center justify-center gap-2 animate-fade-in"
+          >
+            <span>🧠</span> Want a calm moment too?
+          </button>
         )}
 
       </div>
@@ -705,134 +690,135 @@ function HomeContent() {
 
       <InstallHint />
 
-      {showClaimFlow && (
-        <div className="fixed inset-0 bg-[#FFF0F3] z-200 flex flex-col items-center justify-center p-6 animate-fade-in text-center overflow-hidden">
-          <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-            <div className="absolute w-64 h-64 bg-[#FFB3C1]/30 rounded-full blur-3xl animate-pop-in-slow" />
-            <div className="relative z-10 flex flex-col items-center px-4 mb-32">
-              <div className="w-20 h-20 rounded-full bg-[#FFB3C1]/40 flex items-center justify-center mb-6 animate-pop-in shadow-[0_0_40px_rgba(255,143,163,0.3)]">
-                <span className="text-4xl animate-pulse">✨</span>
-              </div>
-              <h1 className="text-2xl font-bold text-[#8A2C3E] mb-4 leading-snug">Claimed, Fine Girl. ✨</h1>
-              <p className="text-[15px] text-[#4A2C35]/80 font-medium leading-relaxed max-w-70">{claimDayText}</p>
-            </div>
-          </div>
-          <div className="absolute bottom-10 w-full max-w-sm px-6 animate-slide-up">
-            <div className="bg-white rounded-3xl p-6 shadow-[0_24px_48px_-16px_rgba(74,44,53,0.25)] border border-[#4A2C35]/5">
-              {claimStep === 1 && (
-                <div className="flex flex-col items-center text-center">
-                  <h2 className="text-lg font-bold text-[#4A2C35] mb-6">Is the worry still on your mind?</h2>
-                  <div className="flex flex-col gap-3 w-full">
-                    <button onClick={() => setClaimStep(2)} className="w-full bg-[#FF8FA3] text-white py-3.5 rounded-full font-bold shadow-[0_8px_20px_rgba(255,143,163,0.3)] active:scale-95 text-sm">Yes, I am still worried 🤍</button>
-                    <button onClick={() => setClaimStep(3)} className="w-full bg-[#FFF0F3] border border-[#4A2C35]/10 text-[#4A2C35]/70 py-3.5 rounded-full font-bold active:scale-95 transition-all text-sm">No, I feel better 🌸</button>
-                  </div>
-                </div>
-              )}
-              {claimStep === 2 && (() => {
-                const recentTags = typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('lateCircleTags') || '[]') : [];
-                const worry = getWorryForTags(recentTags);
-                return (
-                  <div className="flex flex-col items-center text-center">
-                    <h2 className="text-lg font-bold text-[#4A2C35] mb-1">{worryReleasing ? "Give it to me." : "Let it float away."}</h2>
-                    <p className="text-xs text-[#4A2C35]/60 mb-6">{worryReleasing ? "I am carrying it now." : "Watch it leave your body."}</p>
-                    <div className="relative w-full h-24 flex items-center justify-center mb-6">
-                      {!worryReleased && (
-                        <div className={`absolute max-w-60 px-5 py-3 rounded-full bg-[#FFF0F3] border border-[#FFB3C1]/40 transition-all ease-in-out ${worryReleasing ? 'opacity-0 -translate-y-16 scale-50 blur-md' : 'opacity-100 translate-y-0 scale-100'}`} style={{ transitionDuration: '2500ms' }}>
-                          <p className="text-[12px] text-[#8A2C3E] font-medium italic leading-snug">"{worry.worry}"</p>
-                        </div>
-                      )}
-                      {worryReleased && (
-                        <div className="flex gap-2 animate-fade-in">
-                          <div className="w-1.5 h-1.5 rounded-full bg-[#FFB3C1]/60 animate-pulse" />
-                          <div className="w-2 h-2 rounded-full bg-[#FFB3C1]/40 animate-pulse delay-150" />
-                          <div className="w-1.5 h-1.5 rounded-full bg-[#FFB3C1]/60 animate-pulse delay-300" />
-                        </div>
-                      )}
-                    </div>
-                    {!worryReleasing && (
-                      <button onClick={() => { setWorryReleasing(true); setTimeout(() => { setWorryReleased(true); setTimeout(() => { setClaimStep(3); }, 2500); }, 2500); }} className="w-full bg-[#FF8FA3] text-white py-3.5 rounded-full font-bold shadow-[0_8px_20px_rgba(255,143,163,0.3)] active:scale-95 text-sm">Let it float away 🤍</button>
-                    )}
-                    {worryReleased && (
-                      <p className="text-sm text-[#4A2C35]/80 font-medium leading-relaxed animate-fade-in">{worry.oviRelease}</p>
-                    )}
-                  </div>
-                );
-              })()}
-              {claimStep === 3 && (
-                <div className="flex flex-col items-center text-center">
-                  <h2 className="text-lg font-bold text-[#8A2C3E] mb-1">You have the power today.</h2>
-                  <p className="text-xs text-[#4A2C35]/60 mb-5 px-2">Which one feels lightest to do right now? Or just rest.</p>
-                  <div className="flex flex-col gap-2 w-full">
-                    {closedCount === 4 ? (
-                      <p className="text-sm text-[#4A2C35]/80 font-medium mb-2">You've already done enough today. Just rest.</p>
-                    ) : (
-                      <>
-                        {!circles.food && <button onClick={() => { setShowClaimFlow(false); setActiveModal('food'); setShowFoodDetails(false); setShowFoodLog(false); }} className="w-full bg-[#4A2C35] text-white py-3 rounded-xl font-bold active:scale-95 text-sm shadow-md flex items-center justify-center gap-2"><span className="text-lg">🍲</span> Close Food</button>}
-                        {circles.food && !circles.sleep && <button onClick={() => { setShowClaimFlow(false); setActiveModal('sleep'); }} className="w-full bg-[#4A2C35] text-white py-3 rounded-xl font-bold active:scale-95 text-sm shadow-md flex items-center justify-center gap-2"><span className="text-lg">🌙</span> Close Sleep</button>}
-                        {circles.food && circles.sleep && !circles.walk && <button onClick={() => { saveState({ walk: true }); setShowClaimFlow(false); setShowWinCelebration(true); setTimeout(() => setShowWinCelebration(false), 2500); logEvent('circle_closed', { circle: 'walk', day: cycleData.currentDay }); }} className="w-full bg-[#4A2C35] text-white py-3 rounded-xl font-bold active:scale-95 text-sm shadow-md flex items-center justify-center gap-2"><span className="text-lg">👟</span> Close Walk</button>}
-                        {circles.food && circles.sleep && circles.walk && !circles.calm && <button onClick={() => { setShowClaimFlow(false); setActiveModal('calm'); setCalmView('menu'); }} className="w-full bg-[#4A2C35] text-white py-3 rounded-xl font-bold active:scale-95 text-sm shadow-md flex items-center justify-center gap-2"><span className="text-lg">🧠</span> Close Calm</button>}
-                      </>
-                    )}
-                    <button onClick={() => setShowClaimFlow(false)} className="w-full bg-[#FFF0F3] text-[#4A2C35]/60 border border-transparent py-2.5 rounded-xl font-medium active:scale-95 text-xs mt-1">I just want to rest 🤍</button>
-                  </div>
-                </div>
-              )}
+      {/* --- MODALS START HERE --- */}
+
+      {/* NIGHT CHECK MODAL */}
+      {showNightCheck && (
+        <div className="fixed inset-0 bg-[#4A2C35]/20 backdrop-blur-sm z-200 flex items-center justify-center p-6 animate-fade-in">
+          <div className="w-full max-w-sm bg-[#4A2C35] rounded-3xl p-6 shadow-2xl text-center animate-slide-up">
+            <h3 className="text-xl font-bold text-white mb-2">How is your body now?</h3>
+            <p className="text-sm text-white/60 mb-6">Just a quick check before you sleep.</p>
+            <div className="flex flex-col gap-2 w-full">
+              <button onClick={() => { localStorage.setItem('lateCircleNightCheckDone', localDateKey()); setShowNightCheck(false); }} className="w-full bg-[#9CAF88] text-white py-3.5 rounded-xl font-bold active:scale-95 shadow-md text-sm">Better 🌱</button>
+              <button onClick={() => { localStorage.setItem('lateCircleNightCheckDone', localDateKey()); setShowNightCheck(false); }} className="w-full bg-white/10 text-white py-3.5 rounded-xl font-bold active:scale-95 shadow-md text-sm">Same 🌙</button>
+              <button onClick={() => { localStorage.setItem('lateCircleNightCheckDone', localDateKey()); setShowNightCheck(false); }} className="w-full bg-[#FF8FA3] text-white py-3.5 rounded-xl font-bold active:scale-95 shadow-md text-sm">Worse 🤍</button>
             </div>
           </div>
         </div>
       )}
 
-      {activeModal && activeModal !== 'calm' && (
-        <div className="absolute inset-0 bg-[#4A2C35]/20 backdrop-blur-sm flex items-center justify-center z-50 p-6">
-          <div className="w-full max-w-sm bg-white rounded-3xl p-6 text-[#4A2C35] shadow-2xl animate-slide-up border border-[#4A2C35]/5">
-            {activeModal === 'food' && (
-              <>
-                <h3 className="text-lg font-bold mb-3 text-[#4A2C35] leading-snug">Did you eat a balanced plate today before 9pm?</h3>
-                <div className="bg-[#FFF0F3] border border-[#FFB3C1]/30 rounded-2xl p-4 mb-5">
-                  <p className="text-xs text-[#4A2C35]/80 italic">"{oviGists[girl.id as PhaseId].food}"</p>
+      {/* OVI'S CHECK-IN MODAL */}
+      {showCheckModal && (
+        <div className="fixed inset-0 bg-[#4A2C35]/20 backdrop-blur-sm z-200 flex items-center justify-center p-6 animate-fade-in">
+          <div className="w-full max-w-sm bg-white rounded-3xl p-6 shadow-[0_24px_48px_-16px_rgba(74,44,53,0.25)] text-center animate-slide-up border border-[#4A2C35]/5">
+            
+            {checkStep === 'ask' && (
+              <div className="flex flex-col items-center">
+                <h3 className="text-xl font-bold text-[#4A2C35] mb-2">How did your body feel?</h3>
+                <p className="text-sm text-[#4A2C35]/60 mb-6 px-4">
+                  {dailyCheck.question}
+                </p>
+                <div className="flex flex-col gap-2 w-full">
+                  <button 
+                    onClick={() => {
+                      if (dailyCheck.checkType === 'walk') saveState({ walk: true });
+                      else if (dailyCheck.checkType === 'sleep') saveState({ sleep: true });
+                      else if (dailyCheck.checkType === 'calm') saveState({ calm: true });
+                      setShowCheckModal(false);
+                      setShowWinCelebration(true);
+                      setTimeout(() => setShowWinCelebration(false), 2500);
+                      logEvent('circle_closed', { circle: dailyCheck.checkType, day: cycleData.currentDay, feeling: 'full' });
+                    }}
+                    className="w-full bg-[#9CAF88] text-white py-3.5 rounded-xl font-bold active:scale-95 shadow-md text-sm"
+                  >
+                    I gave my body what it needed ✅
+                  </button>
+                  
+                  <button 
+                    onClick={() => setCheckStep('grace')}
+                    className="w-full bg-[#FFF0F3] text-[#4A2C35] border border-[#4A2C35]/10 py-3.5 rounded-xl font-bold active:scale-95 text-sm"
+                  >
+                    I tried a little 🤍
+                  </button>
+
+                  <button 
+                    onClick={() => setCheckStep('refused')}
+                    className="w-full bg-white border border-transparent text-[#4A2C35]/40 py-2 text-xs font-medium active:scale-95"
+                  >
+                    Not today, but I am still here
+                  </button>
                 </div>
-                <p className="text-[11px] text-[#9CAF88] font-semibold mb-5">Rule: Last food before 9pm</p>
-                <div className="flex gap-3 mt-auto">
-                  <button onClick={() => { saveState({ food: true }); setActiveModal(null); setShowWinCelebration(true); setTimeout(() => setShowWinCelebration(false), 2500); logEvent('circle_closed', { circle: 'food', day: cycleData.currentDay }); }} className="flex-1 bg-[#9CAF88] text-white py-3 rounded-xl font-bold active:scale-95">Yes, I did</button>
-                  <button onClick={() => setActiveModal(null)} className="flex-1 border border-[#4A2C35]/15 py-3 rounded-xl font-medium active:scale-95">Not yet</button>
-                </div>
-              </>
+              </div>
             )}
-            {activeModal === 'walk' && (
-              <>
-                <h3 className="text-lg font-bold mb-3 text-[#4A2C35] leading-snug">Did you walk or move 20 mins today? Not gym, just move?</h3>
-                <div className="bg-[#9CAF88]/10 border border-[#9CAF88]/30 rounded-2xl p-3 mb-3">
-                  <p className="text-xs text-[#4A2C35]/80 italic">"{oviGists[girl.id as PhaseId].walk}"</p>
+
+            {checkStep === 'grace' && (
+              <div className="flex flex-col items-center">
+                <div className="w-12 h-12 rounded-full bg-[#FFF0F3] flex items-center justify-center mb-4 text-2xl">🤍</div>
+                <h3 className="text-lg font-bold text-[#4A2C35] mb-2">That is enough.</h3>
+                <p className="text-sm text-[#4A2C35]/70 mb-6 leading-relaxed px-2">
+                  Small small is still progress. Let's just do one tiny thing together right now. 
+                  {dailyCheck.checkType === 'sleep' ? " Close your eyes and take 3 deep breaths." 
+                   : dailyCheck.checkType === 'walk' ? " Stand up and stretch your arms to the ceiling." 
+                   : dailyCheck.checkType === 'calm' ? " Close your eyes for 10 seconds and just breathe." 
+                   : " Drink one glass of water right now."}
+                </p>
+                <div className="flex flex-col gap-2 w-full">
+                  <button 
+                    onClick={() => {
+                      if (dailyCheck.checkType === 'walk') saveState({ walk: true });
+                      else if (dailyCheck.checkType === 'sleep') saveState({ sleep: true });
+                      else if (dailyCheck.checkType === 'calm') saveState({ calm: true });
+                      setShowCheckModal(false);
+                      setShowWinCelebration(true);
+                      setTimeout(() => setShowWinCelebration(false), 2500);
+                      logEvent('circle_closed', { circle: dailyCheck.checkType, day: cycleData.currentDay, feeling: 'micro_win' });
+                    }}
+                    className="w-full bg-[#FF8FA3] text-white py-3.5 rounded-xl font-bold active:scale-95 shadow-md"
+                  >
+                    Okay, I did it ✅
+                  </button>
+                  <button 
+                    onClick={() => setCheckStep('refused')}
+                    className="w-full bg-white border border-transparent text-[#4A2C35]/40 py-2 text-xs font-medium active:scale-95"
+                  >
+                    Not right now
+                  </button>
                 </div>
-                <div className="bg-[#FFF0F3] border border-[#FFB3C1]/30 rounded-2xl p-4 mb-3">
-                  <ul className="text-[13px] text-[#4A2C35]/80 space-y-1.5">
-                    <li>• Walk to junction and back</li>
-                    <li>• Dance to 3 songs in room</li>
-                    <li>• Sweep, mop, climb stairs 10 mins</li>
-                    <li>• Stand & stretch every 2 hrs if you sit in shop/office</li>
-                  </ul>
-                </div>
-                <p className="text-[11px] text-[#9CAF88] font-semibold mb-5">Rule: No need gym wear</p>
-                <div className="flex gap-3 mt-auto">
-                  <button onClick={handleWalk} className="flex-1 bg-[#9CAF88] text-white py-3 rounded-xl font-bold active:scale-95">Yes, I moved 20 mins</button>
-                  <button onClick={() => setActiveModal(null)} className="flex-1 border border-[#4A2C35]/15 py-3 rounded-xl font-medium active:scale-95">Not yet</button>
-                </div>
-              </>
+              </div>
             )}
-            {activeModal === 'sleep' && (
-              <>
-                <h3 className="text-lg font-bold mb-3 text-[#4A2C35] leading-snug">Will you be in bed by 10:30pm tonight? No phone scrolling?</h3>
-                <div className="bg-[#9CAF88]/10 border border-[#9CAF88]/30 rounded-2xl p-3 mb-4">
-                  <p className="text-xs text-[#4A2C35]/80 italic">"{oviGists[girl.id as PhaseId].sleep}"</p>
-                </div>
-                <p className="text-[11px] text-[#9CAF88] font-semibold mb-1">Rule: Bed by 10:30, not sleep by 10:30</p>
-                <p className="text-[11px] text-[#4A2C35]/50 font-medium mb-5">Target: 7+ hrs of sleep</p>
-                <div className="flex gap-3 mt-auto">
-                  <button onClick={() => { saveState({ sleep: true }); setActiveModal(null); setShowWinCelebration(true); setTimeout(() => setShowWinCelebration(false), 2500); logEvent('circle_closed', { circle: 'sleep', day: cycleData.currentDay }); }} className="flex-1 bg-[#9CAF88] text-white py-3 rounded-xl font-bold active:scale-95">Yes, I will</button>
-                  <button onClick={() => setActiveModal(null)} className="flex-1 border border-[#4A2C35]/15 py-3 rounded-xl font-medium active:scale-95">Not yet</button>
-                </div>
-              </>
+
+            {checkStep === 'refused' && (
+              <div className="flex flex-col items-center animate-fade-in">
+                <div className="w-12 h-12 rounded-full bg-[#FFF0F3] flex items-center justify-center mb-4 text-2xl">🌙</div>
+                <h3 className="text-lg font-bold text-[#4A2C35] mb-2">It's okay.</h3>
+                <p className="text-sm text-[#4A2C35]/70 mb-6 leading-relaxed px-2">
+                  Thank you for checking in. I am still here with you. Tomorrow is a new day. Rest now.
+                </p>
+                <button 
+                  onClick={() => setShowCheckModal(false)}
+                  className="w-full bg-[#4A2C35] text-white py-3.5 rounded-xl font-bold active:scale-95 shadow-md"
+                >
+                  Okay, Ovi
+                </button>
+              </div>
             )}
+
+          </div>
+        </div>
+      )}
+
+      {activeModal === 'food' && (
+        <div className="fixed inset-0 bg-[#4A2C35]/20 backdrop-blur-sm z-50 flex items-center justify-center p-6 animate-fade-in">
+          <div className="w-full max-w-sm bg-white rounded-3xl p-6 shadow-2xl animate-slide-up text-center">
+            <h3 className="text-lg font-bold mb-3 text-[#4A2C35] leading-snug">Did you eat a balanced plate today before 9pm?</h3>
+            <div className="bg-[#FFF0F3] border border-[#FFB3C1]/30 rounded-2xl p-4 mb-5">
+              <p className="text-xs text-[#4A2C35]/80 italic">"{oviGists[girl.id as PhaseId]?.food || 'Food is medicine.'}"</p>
+            </div>
+            <div className="flex flex-col gap-2">
+              <button onClick={() => { saveState({ food: true }); setActiveModal(null); setShowWinCelebration(true); setTimeout(() => setShowWinCelebration(false), 2500); logEvent('circle_closed', { circle: 'food', day: cycleData.currentDay, feeling: 'full' }); }} className="w-full bg-[#9CAF88] text-white py-3.5 rounded-xl font-bold active:scale-95">I gave my body what it needed ✅</button>
+              <button onClick={() => { setActiveModal(null); setCheckStep('grace'); setShowCheckModal(true); }} className="w-full bg-[#FFF0F3] text-[#4A2C35] border border-[#4A2C35]/10 py-3.5 rounded-xl font-bold active:scale-95 text-sm">I tried a little 🤍</button>
+              <button onClick={() => { setActiveModal(null); setCheckStep('refused'); setShowCheckModal(true); }} className="w-full bg-white border border-transparent text-[#4A2C35]/40 py-2 text-xs font-medium active:scale-95">Not today, but I am still here</button>
+            </div>
           </div>
         </div>
       )}
@@ -926,13 +912,21 @@ function HomeContent() {
             <span className="text-3xl">🌙</span>
             <h1 className="text-3xl font-serif text-[#4A2C35]">Goodnight, fine girl</h1>
           </div>
-          <p className="text-[#4A2C35]/70 text-sm mb-10 text-center max-w-xs px-2">
-            {closedCount === 0 && "You opened the app. That's the first win. Tomorrow we try one circle."}
-            {closedCount === 1 && "You showed up today. 1 win is still a win 💚"}
-            {closedCount === 2 && "2 wins today — that's a real win, fine girl! You showed up 💚"}
-            {closedCount === 3 && "3 wins — close to a full circle today ✨"}
-            {closedCount === 4 && "All 4 today. That's a full circle, babe. Let's do it again tomorrow ✨"}
-          </p>
+          <div className="text-[#4A2C35]/70 text-sm mb-10 text-center max-w-xs px-2">
+            {promiseDay === 7 ? (
+              <p className="text-[#4A2C35] text-sm font-bold mb-1">
+                You kept your 7-day promise. 🌱 You are building a real habit.
+              </p>
+            ) : (
+              <>
+                {closedCount === 0 && "You opened the app. That's the first win. Tomorrow we try one circle."}
+                {closedCount === 1 && "You showed up today. 1 win is still a win 💚"}
+                {closedCount === 2 && "2 wins today — that's a real win, fine girl! You showed up 💚"}
+                {closedCount === 3 && "3 wins — close to a full circle today ✨"}
+                {closedCount === 4 && "All 4 today. That's a full circle, babe. Let's do it again tomorrow ✨"}
+              </>
+            )}
+          </div>
           <div className="flex justify-between w-full max-w-sm mb-10 bg-white p-4 rounded-3xl border border-[#4A2C35]/5 shadow-sm">
             <div className="flex flex-col items-center gap-2">
               <div className={`w-14 h-14 rounded-full flex items-center justify-center ${circles.food ? 'bg-[#9CAF88] text-white' : 'border-2 border-[#4A2C35]/10 text-[#4A2C35]/40'}`}><span className="text-xl">{circles.food ? '✓' : '🍲'}</span></div>
@@ -1062,6 +1056,14 @@ function HomeContent() {
           </div>
         </div>
       )}
+
+      {/* FLOATING OVI ORB */}
+      <button 
+        onClick={() => router.push('/chat')}
+        className="fixed bottom-28 right-6 z-50 w-16 h-16 rounded-full bg-linear-to-tr from-[#FF8FA3] to-[#9CAF88] shadow-[0_8px_32px_rgba(255,143,163,0.4)] animate-orb-breathe flex items-center justify-center active:scale-95 transition-transform"
+      >
+        <span className="text-2xl text-white font-bold drop-shadow-md">O</span>
+      </button>
 
     </main>
   );
