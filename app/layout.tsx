@@ -3,11 +3,12 @@ import { Inter } from 'next/font/google';
 import './globals.css';
 import NavigationWrapper from './components/NavigationWrapper';
 import RegisterSW from './components/RegisterSW';
+import InstallHint from './components/InstallHint';
 
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'Late Circle',
+  title: 'Ovi',
   description: 'Lifestyle & habit tracker',
   manifest: '/manifest.webmanifest',
   icons: {
@@ -17,7 +18,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
-    title: 'Late Circle',
+    title: 'Ovi',
   },
 };
 
@@ -37,6 +38,9 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${inter.className} bg-[#FFF0F3]`}>
+        <div className="px-4 pt-4 flex justify-center">
+          <InstallHint />
+        </div>
         {children}
         <NavigationWrapper />
         <RegisterSW />
