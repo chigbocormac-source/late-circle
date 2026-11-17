@@ -43,14 +43,9 @@ function getUserCycleData(): UserCycleData | undefined {
   const prevPeriod = localStorage.getItem('lateCirclePrevPeriod');
   const cycleType = localStorage.getItem('lateCircleType');
 
-  // average = the same value your app already uses everywhere
   const realAvg = getRealCycleLength(lastPeriod, prevPeriod, cycleType);
   const { currentDay, average, lateDays } = getCycleData(lastPeriod, [realAvg]);
-
-  // phase name from your real 5 girls
   const phase = getCyclePhase(currentDay, average);
-
-  // has she logged bleeding today?
   const lastBleedDate = localStorage.getItem('lateCircleLastBleedDate');
   const hasLoggedBleedingToday = lastBleedDate === localDateKey();
 
@@ -58,9 +53,18 @@ function getUserCycleData(): UserCycleData | undefined {
     currentDay,
     average,
     lateDays,
-    phase: phase.name, // 'Rest Girl' | 'Fresh Girl' | 'Fine Girl' | 'Chop Girl' | 'Ready Girl'
+    phase: phase.name,
     hasLoggedBleedingToday,
   };
+}
+
+// --- NEW: Real time greeting ---
+function getTimeGreeting() {
+  const hour = new Date().getHours();
+  if (hour >= 5 && hour < 12) return 'this morning';
+  if (hour >= 12 && hour < 17) return 'this afternoon';
+  if (hour >= 17 && hour < 22) return 'tonight';
+  return 'tonight';
 }
 
 export default function OviChat() {
@@ -79,10 +83,11 @@ export default function OviChat() {
   useEffect(() => {
     if (hasConsent === true || hasConsent === false) {
       setTimeout(() => {
+        const timeWord = getTimeGreeting();
         setMessages([{
           id: '1',
           role: 'ovi',
-          text: "Love, I am here. How are you feeling tonight? What do you want to understand today?",
+          text: `Love, I am here. How are you feeling ${timeWord}? What do you want to understand today?`,
           chips: ["My period is late", "I had sex, am I pregnant?", "How can I feel better right now?", "My Period", "I need Soft Place"]
         }]);
       }, 500);
@@ -98,7 +103,6 @@ export default function OviChat() {
     setIsTyping(true);
 
     setTimeout(() => {
-      // Read her real data at send-time, and pass it in
       const userData = getUserCycleData();
       const reply = getOviReply(text, chatState, userData);
       setChatState(reply.newState);
@@ -163,7 +167,6 @@ export default function OviChat() {
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {/* Search + Quick Tags - small bar, scrolls with chat, does not block */}
         <div className="sticky top-0 z-5 bg-[#FFF0F3] pb-2">
           <OviSearchHeader
             searchTerm={input}
