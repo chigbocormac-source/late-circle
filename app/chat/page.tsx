@@ -2,9 +2,10 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { getOviReply, ChatState, UserCycleData, TOPIC_MENU } from '@/utils/chatEngine';
+import { getOviReply, ChatState, UserCycleData } from '@/utils/chatEngine';
 import { getCyclePhase, getRealCycleLength } from '../../utils/cycleEngine';
 import { localDateKey } from '../../utils/analytics';
+import { OviSearchHeader } from '../components/OviSearchHeader';
 
 type Message = {
   id: string;
@@ -57,7 +58,7 @@ function getUserCycleData(): UserCycleData | undefined {
     currentDay,
     average,
     lateDays,
-    phase: phase.name,   // 'Rest Girl' | 'Fresh Girl' | 'Fine Girl' | 'Chop Girl' | 'Ready Girl'
+    phase: phase.name, // 'Rest Girl' | 'Fresh Girl' | 'Fine Girl' | 'Chop Girl' | 'Ready Girl'
     hasLoggedBleedingToday,
   };
 }
@@ -82,7 +83,7 @@ export default function OviChat() {
           id: '1',
           role: 'ovi',
           text: "Love, I am here. How are you feeling tonight? What do you want to understand today?",
-          chips: ["My period is late", "Pregnancy Fear", "My Period", "Ovulation", "I need Soft Place"]
+          chips: ["My period is late", "I had sex, am I pregnant?", "How can I feel better right now?", "My Period", "I need Soft Place"]
         }]);
       }, 500);
     }
@@ -162,6 +163,15 @@ export default function OviChat() {
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        {/* Search + Quick Tags - small bar, scrolls with chat, does not block */}
+        <div className="sticky top-0 z-5 bg-[#FFF0F3] pb-2">
+          <OviSearchHeader
+            searchTerm={input}
+            setSearchTerm={setInput}
+            onSelectQuery={(query) => handleSend(query)}
+          />
+        </div>
+
         {messages.map((msg) => (
           <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} animate-slide-up-slow`}>
             <div className={`max-w-[80%] p-4 rounded-2xl ${
@@ -192,12 +202,19 @@ export default function OviChat() {
       </div>
 
       {!isTyping && messages.length > 0 && messages[messages.length - 1].chips && (
-        <div className="px-4 pb-2 flex gap-2 overflow-x-auto no-scrollbar animate-fade-in">
-          {messages[messages.length - 1].chips!.map((chip, i) => (
-            <button key={i} onClick={() => handleSend(chip)} className="whitespace-nowrap px-4 py-2 bg-white border border-[#9CAF88] text-[#4A2C35] rounded-full text-sm font-medium shadow-sm hover:bg-[#D1DCC6] transition">
-              {chip}
-            </button>
-          ))}
+        <div className="w-full overflow-x-auto px-4 pb-3 pt-1 scrollbar-none">
+          <div className="flex gap-2 w-max max-w-none">
+            {messages[messages.length - 1].chips!.map((chip, i) => (
+              <button
+                key={i}
+                onClick={() => handleSend(chip)}
+                className="shrink-0 whitespace-nowrap px-4 py-2 bg-white border border-[#9CAF88] text-[#4A2C35] rounded-full text-sm font-medium shadow-sm hover:bg-[#D1DCC6] transition"
+              >
+                {chip}
+              </button>
+            ))}
+            <span className="shrink-0 w-2" />
+          </div>
         </div>
       )}
 
