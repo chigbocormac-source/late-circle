@@ -1358,12 +1358,13 @@ function HomeContent() {
         </div>
       )}
 
-      {/* FLOATING OVI ORB */}
+      {/* FLOATING OVI CHAT BUTTON - NOW SAYS "ASK OVI" */}
       <button 
         onClick={() => router.push('/chat')}
-        className="fixed bottom-28 right-6 z-50 w-16 h-16 rounded-full bg-linear-to-tr from-[#FF8FA3] to-[#9CAF88] shadow-[0_8px_32px_rgba(255,143,163,0.4)] animate-orb-breathe flex items-center justify-center active:scale-95 transition-transform"
+        className="fixed bottom-28 right-6 z-50 flex items-center gap-2 px-5 h-14 rounded-full bg-linear-to-tr from-[#FF8FA3] to-[#9CAF88] shadow-[0_8px_32px_rgba(255,143,163,0.4)] animate-orb-breathe active:scale-95 transition-transform"
       >
-        <span className="text-2xl text-white font-bold drop-shadow-md">O</span>
+        <span className="text-xl">💬</span>
+        <span className="text-sm font-bold text-white drop-shadow-md">Ask Ovi</span>
       </button>
 
     </main>
