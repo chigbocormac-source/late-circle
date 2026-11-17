@@ -1,4 +1,5 @@
 export async function registerServiceWorker() {
+  if (typeof window === 'undefined') return false;
   if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
     return false;
   }
@@ -9,14 +10,22 @@ export async function registerServiceWorker() {
 
 export async function subscribeToPush(): Promise<PushSubscription | null> {
   try {
+    // 1. Check if we are on HTTPS (Push only works on HTTPS or localhost)
+    if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') {
+      console.warn('[push] Push notifications require HTTPS. If you are testing on a local network IP, this will fail safely.');
+      return null;
+    }
+
     const registration = await registerServiceWorker();
     if (!registration) return null;
+
+    // 2. WAIT for the service worker to be fully active
+    await navigator.serviceWorker.ready;
 
     const permission = await Notification.requestPermission();
     if (permission !== 'granted') return null;
 
     // PASTE YOUR PUBLIC KEY HERE (starts with 'B')
-    // We hardcode it here to prevent the process.env crash in the browser.
     const publicKey = 'BA0oz1YP_9nx534ELYm9P_gZeae4WU0ZJywLjd3-dw4QaQJvUe6pPFAN-MdWcI4v5VrfxUz92KpYROR9Ao0RNpw'; 
 
     if (!publicKey) {
@@ -35,6 +44,7 @@ export async function subscribeToPush(): Promise<PushSubscription | null> {
     
     return subscription;
   } catch (error) {
+    // We catch the error here so the app doesn't crash with the red screen
     console.error("Push subscription failed:", error);
     return null;
   }

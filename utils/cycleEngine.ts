@@ -8,29 +8,15 @@ export function getCyclePhase(day: number, average: number = 35) {
   // Percentage of the cycle we're in (0..100)
   const pct = (safeDay / safeAvg) * 100;
 
-  // Phase boundaries per V1.2 spec:
-  //   Rest:  First 15%
-  //   Fresh: 15% – 35%
-  //   Fine:  35% – 60%
-  //   Chop:  60% – 80%
-  //   Ready: Last 20% (i.e. 80% – 100%+)
-  if (pct <= 15) return { id: 'rest' as PhaseId,  name: 'Rest Girl',  emoji: '🌙', color: '#9CAF88', focus: ['sleep', 'calm'] };
-  if (pct <= 35) return { id: 'fresh' as PhaseId, name: 'Fresh Girl', emoji: '🌱', color: '#9CAF88', focus: ['walk', 'food'] };
-  if (pct <= 60) return { id: 'fine' as PhaseId,  name: 'Fine Girl',  emoji: '✨', color: '#D4AF37', focus: ['food', 'walk', 'sleep', 'calm'] };
-  if (pct <= 80) return { id: 'chop' as PhaseId,  name: 'Chop Girl',  emoji: '🍚', color: '#FF8FA3', focus: ['food', 'calm'] };
-  return              { id: 'ready' as PhaseId, name: 'Ready Girl', emoji: '💜', color: '#8A2C3E', focus: ['sleep', 'calm'] };
+  // Phase boundaries:
+  if (pct <= 15) return { id: 'rest' as PhaseId,  name: 'Rest Girl',  emoji: '🌙', color: '#9CAF88', focus: ['sleep'] };
+  if (pct <= 35) return { id: 'fresh' as PhaseId, name: 'Fresh Girl', emoji: '🌱', color: '#9CAF88', focus: ['walk'] };
+  if (pct <= 60) return { id: 'fine' as PhaseId,  name: 'Fine Girl',  emoji: '✨', color: '#D4AF37', focus: ['food'] };
+  if (pct <= 80) return { id: 'chop' as PhaseId,  name: 'Chop Girl',  emoji: '🍚', color: '#FF8FA3', focus: ['food'] };
+  return              { id: 'ready' as PhaseId, name: 'Ready Girl', emoji: '💜', color: '#8A2C3E', focus: ['calm'] };
 }
 
-export const oviWelcome: Record<PhaseId, string> = {
-  rest: "You are in your Rest days. Your body is resting from bleeding. That is why you feel tired. Sleep well and take 90 seconds of Calm today.",
-  fresh: "You are in your Fresh days. Bleeding has finished and your energy is coming back. It is a good time to start again.",
-  fine: "You are in your Fine days. You feel fine, glowing and confident. Use this energy to do more today.",
-  chop: "You are in your Chop days. You want to eat everything and feel more emotional. It is your pattern, not you.",
-  ready: "You are in your Ready days. Your period is close and your body is slowing down. Put a pad in your bag today."
-};
-
 // Note: The text below is for the 5 Girls Explainer Modal.
-// We will use this in the next file we update.
 export const oviGists: Record<PhaseId, Record<string, string>> = {
   rest: {
     food: "No appetite? It's normal. Keep small plate. Indomie? Add 2 eggs and cabbage.",
@@ -64,58 +50,70 @@ export const oviGists: Record<PhaseId, Record<string, string>> = {
   }
 };
 
+// THE NEW GOOD MORNING SCRIPT (Shows once when she enters a new phase)
+export function getPhaseWelcome(
+  girl: PhaseId,
+  cycleDay: number,
+  daysUntilNext: number
+): string {
+  switch (girl) {
+    case 'rest':
+      return `Love, good morning. You are in your Period Phase today - Day ${cycleDay}. Your body is cleaning. Rest today, don't stress yourself. Drink water. If cramp is too much, put warm water on your belle. I'm here.`;
+    case 'fresh':
+      return `Love, good morning. You are in your Growing Phase today - Day ${cycleDay}. Your energy is coming back. This is a good time to do your work, exercise, and eat well. Your body is preparing a new egg.`;
+    case 'fine':
+      return `Love, good morning. You are in your Ovulation Phase today - Day ${cycleDay}. This is your sensitive time. If you don't want pregnancy, be careful today. If you are trying for baby, this is your best time. You may feel hot or see clear discharge. That's normal.`;
+    case 'chop':
+      return `Love, good morning. You are in your Cravings Phase today - Day ${cycleDay}. Your body is slowing down and preparing for your period. You might feel hungrier than usual. That's your body asking for fuel, not greed. Eat well today.`;
+    case 'ready':
+      return `Love, good morning. You are in your Waiting Phase today - Day ${cycleDay}. If you are feeling moody or your breast is paining you, it's not you. It's this phase. Be soft with yourself. Your period will come in about ${daysUntilNext} days.`;
+    default:
+      return `Love, good morning.`;
+  }
+}
+
+// THE DAILY GREETING (Shows every day)
 export function getMorningGreeting(
   girl: PhaseId,
   yesterdayCount: number | null
 ): string {
-  // Day 1: no memory yet
   if (yesterdayCount === null) {
     const welcomes: Record<PhaseId, string> = {
-      rest: "Rest Girl is here. Rest today. Sleep and Calm.",
-      fresh: "Fresh Girl is here. Start with Walk and Food today.",
-      fine: "Fine Girl is here. Try for all 4 today if you can.",
-      chop: "Chop Girl is here. Eat a balanced plate. Then do your calm.",
-      ready: "Ready Girl is here. Slow down today. Sleep early.",
+      rest: "Sleep is your medicine today.",
+      fresh: "Move a little today.",
+      fine: "Fuel your glow today.",
+      chop: "Eat well today.",
+      ready: "Breathe today.",
     };
     return welcomes[girl];
   }
 
-  // Binary memory: 2+ = "You showed up", 0-1 = "Yesterday is gone"
   if (yesterdayCount >= 2) {
     const showedUp: Record<PhaseId, string> = {
       rest: "You closed 2 yesterday even while bleeding. That is strong. Rest again today.",
-      fresh: "You showed up yesterday. Let's do it again today. Walk and Food.",
-      fine: "You showed up yesterday. Your glow is working. Let's go again today.",
-      chop: "You ate well yesterday. That is discipline. Let's do it again today.",
-      ready: "You slept early yesterday. Your body thanked you. Slow down again today.",
+      fresh: "You showed up yesterday. Let's do it again today. Move a little.",
+      fine: "You showed up yesterday. Your glow is working. Fuel it again today.",
+      chop: "You ate well yesterday. That is discipline. Eat well again today.",
+      ready: "You slept early yesterday. Your body thanked you. Breathe again today.",
     };
     return showedUp[girl];
   } else {
     const tryAgain: Record<PhaseId, string> = {
-      rest: "Yesterday is gone. Today is new. Rest today. Sleep and Calm.",
-      fresh: "Yesterday is gone. Today is new. Start fresh today. Walk and Food.",
-      fine: "Yesterday is gone. Today is new. Your glow is still here. Let's start today.",
-      chop: "Yesterday is gone. Today is new. Eat well today. Food and Calm.",
-      ready: "Yesterday is gone. Today is new. Slow down today. Sleep and Calm.",
+      rest: "Yesterday is gone. Today is new. Sleep today.",
+      fresh: "Yesterday is gone. Today is new. Move a little today.",
+      fine: "Yesterday is gone. Today is new. Your glow is still here. Fuel it today.",
+      chop: "Yesterday is gone. Today is new. Eat well today.",
+      ready: "Yesterday is gone. Today is new. Just breathe today.",
     };
     return tryAgain[girl];
   }
 }
 
-// ============================================================
-// getRealCycleLength — NEW (V1.3.1)
-// Reads her real cycle from onboarding data, not the fake [32, 35, 38] array.
-// Priority:
-//   1. Diff between lastPeriodDate and prevPeriodDate (real numbers)
-//   2. Her cycleType answer (Monthly → 28, Often Late → 38, Very Irregular → 45)
-//   3. Fallback to 35
-// ============================================================
 export function getRealCycleLength(
   lastPeriodDate: string | null,
   prevPeriodDate: string | null,
   cycleType: string | null
 ): number {
-  // 1. Real diff from two dates
   if (lastPeriodDate && prevPeriodDate) {
     const [ly, lm, ld] = lastPeriodDate.split('-').map(Number);
     const [py, pm, pd] = prevPeriodDate.split('-').map(Number);
@@ -127,15 +125,13 @@ export function getRealCycleLength(
     }
   }
 
-  // 2. Estimate from cycleType
   if (cycleType === 'Monthly') return 28;
   if (cycleType === 'Often Late') return 38;
   if (cycleType === 'Very Irregular') return 45;
 
-  // 3. Fallback
   return 35;
 }
-// Calculates the day she is actually late, using her longest known cycle.
+
 export function getLateBoundary(
   history: string[],
   lastPeriodDate: string,

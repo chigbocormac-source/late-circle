@@ -1,15 +1,17 @@
 'use client';
 
+import { DAILY_TEASERS } from '../../utils/teasers';
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '../supabase';
-import { getCyclePhase, oviGists, PhaseId, oviWelcome, getMorningGreeting, getRealCycleLength, getLateBoundary } from '../../utils/cycleEngine';
+import { getCyclePhase, oviGists, PhaseId, getPhaseWelcome, getMorningGreeting, getRealCycleLength, getLateBoundary } from '../../utils/cycleEngine';
 import { getDailyGist } from '../../utils/dailyGist';
 import InstallHint from '../components/InstallHint';
 import { trackAppOpened, logEvent, localDateKey } from '../../utils/analytics';
 import { subscribeToPush } from '../../utils/push';
 import { getClaimCopy } from '../../utils/claimCopy';
 import { getWorryForTags } from '../../utils/worryBubble';
+import { ensureIdentity } from '../../utils/identity';
 
 // --- THE HEALING MATRIX ---
 function getDailyCheck(cycleDay: number, averageCycle: number, girlId: string) {
@@ -118,20 +120,32 @@ function HomeContent() {
   const [customFood, setCustomFood] = useState('');
 
   useEffect(() => {
-    const onboarded = localStorage.getItem('lateCircleOnboarded');
-    if (!onboarded) {
-      router.push('/onboarding');
-      return;
-    }
+    let cancelled = false;
 
-    let currentUserId = localStorage.getItem('lateCircleUserId');
-    if (!currentUserId) {
-      currentUserId = crypto.randomUUID();
-      localStorage.setItem('lateCircleUserId', currentUserId);
-      supabase.from('profiles').insert([{ id: currentUserId, name: 'Fine Girl' }])
-        .then(({ error }) => { if (error) console.error("Profile error:", error); });
-    }
+    (async () => {
+      const { userId: currentUserId, onboarded, isLoggedIn, wasRestored } = await ensureIdentity();
 
+      if (cancelled) return;
+
+      if (wasRestored) {
+        console.log('[today] identity restored from cookie + Supabase');
+      }
+      if (isLoggedIn) {
+        console.log('[today] logged in as', currentUserId);
+      }
+
+      if (!onboarded) {
+        router.push('/onboarding');
+        return;
+      }
+
+      runAfterIdentity(currentUserId);
+    })();
+
+    return () => { cancelled = true; };
+  }, [router]);
+
+  function runAfterIdentity(currentUserId: string) {
     const savedDate = localStorage.getItem('lateCircleLastPeriod');
     if (savedDate) setLastPeriodDate(savedDate);
 
@@ -235,7 +249,7 @@ function HomeContent() {
     trackAppOpened(cycleDataForPhase.currentDay);
         
     setIsLoaded(true);
-  }, [router]);
+  }
 
   useEffect(() => {
     if (isLoaded && circles && !localStorage.getItem('lateCirclePushAsked')) {
@@ -523,31 +537,45 @@ function HomeContent() {
   return (
     <main className={`h-screen overflow-y-auto flex flex-col items-center pt-12 pb-40 px-6 font-sans relative animate-page-enter transition-colors duration-500 ${isLate ? 'bg-[#FFE5EC]' : 'bg-[#FFF0F3]'} text-[#4A2C35]`}>
       
-
-
       {showPeriodCame && (
         <div className="absolute inset-0 bg-[#FFF0F3] z-200 flex flex-col items-center justify-center p-6 text-center animate-fade-in">
-          <h1 className="text-4xl font-bold text-[#8A2C3E] mb-4 animate-pop-in">IT CAME! ✨</h1>
-          <p className="text-lg text-[#4A2C35] font-bold mb-2">See, Fine Girl? I told you it was on its way to you.</p>
-          <p className="text-sm text-[#4A2C35]/70 mb-8">You claimed it. You carried it. You waited. And it came.</p>
+          <h1 className="text-4xl font-bold text-[#8A2C3E] mb-4 animate-pop-in">
+            {lateDays >= 21 ? "She's here. You did it. ✨" : lateDays >= 7 ? "She finally came! ✨" : "She's here! ✨"}
+          </h1>
+          
+          <p className="text-lg text-[#4A2C35] font-bold mb-2">
+            {lateDays >= 21 
+              ? "After all those days of waiting, worrying, checking... she's here."
+              : lateDays >= 7
+                ? "Oh, my love. I know how long you waited for this."
+                : "See? I told you your body was just taking its time."}
+          </p>
+          
+          <p className="text-sm text-[#4A2C35]/70 mb-8 max-w-xs mx-auto leading-relaxed">
+            {lateDays >= 21 
+              ? "Thank you for trusting me through it. Thank you for not panicking alone. Today is Day 1. A new circle. A fresh start. You were never broken."
+              : lateDays >= 7
+                ? "You checked in every day. You didn't give up. I'm so proud of you. Let's mark today as Day 1. Your streak is safe. Your body did it."
+                : "Welcome back, love. Let's log Day 1 together. Drink water, rest, and be gentle with yourself today."}
+          </p>
           
           <div className="bg-white p-6 rounded-3xl shadow-sm mb-10 w-full max-w-sm">
-             <p className="text-sm text-[#4A2C35] leading-relaxed">
-               And remember that worry I was carrying for you? I am giving it back to you now, but it's empty. You don't need it anymore. You can drop it.
+             <p className="text-sm text-[#4A2C35] leading-relaxed italic">
+               "And remember that worry I was carrying for you? I am giving it back to you now, but it's empty. You don't need it anymore."
              </p>
           </div>
 
           <div className="bg-white p-4 rounded-2xl mb-8 w-full max-w-sm flex justify-between items-center shadow-sm">
              <span className="text-sm font-bold">How do you feel?</span>
              <div className="flex gap-2">
-               <button className="text-2xl active:scale-90">😴</button>
-               <button className="text-2xl active:scale-90">😊</button>
-               <button className="text-2xl active:scale-90">🤕</button>
+               <button className="text-2xl active:scale-90 transition-transform">😴</button>
+               <button className="text-2xl active:scale-90 transition-transform">😊</button>
+               <button className="text-2xl active:scale-90 transition-transform">🤕</button>
              </div>
           </div>
 
           <button onClick={() => { setShowPeriodCame(false); router.push('/cycle'); }} className="w-full max-w-sm bg-[#4A2C35] text-white py-4 rounded-full font-bold active:scale-95 shadow-lg">
-            Yes! It Came, Fine Girl ✨
+            Start My New Circle 🌸
           </button>
         </div>
       )}
@@ -560,7 +588,7 @@ function HomeContent() {
             </div>
             <h3 className="text-xl font-bold text-[#4A2C35] mb-2">Welcome to {girl.name}.</h3>
             <p className="text-sm text-[#4A2C35]/70 mb-6 leading-relaxed italic">
-              "{oviWelcome[girl.id as PhaseId]}"
+              "{getPhaseWelcome(girl.id as PhaseId, cycleData.currentDay, Math.max(1, cycleData.average - cycleData.currentDay))}"
             </p>
             <div className="bg-[#FFF0F3] border border-[#4A2C35]/10 rounded-2xl p-4 mb-6 w-full text-left">
               <h4 className="text-[10px] font-bold text-[#4A2C35]/40 uppercase tracking-widest mb-2">Your check today</h4>
@@ -596,10 +624,9 @@ function HomeContent() {
       <div className="w-full max-w-sm flex flex-col items-center animate-fade-in mt-2 mb-4">
         
         {/* 1. The Girl (Top) */}
-        <div className="text-center mb-4 w-full flex flex-col items-center">
-          
+        <div className="text-center mb-6 w-full flex flex-col items-center">
           <h1 className="text-2xl font-serif text-[#4A2C35] italic mb-3">
-            Today you are {dailyCheck.girlName}
+            {dailyCheck.girlName === 'Fine Girl' ? "Fine girl, today you are glowing." : `Love, today you are ${dailyCheck.girlName}.`}
           </h1>
 
           <p className="text-xs text-[#4A2C35]/60 font-medium px-4 leading-relaxed mb-3">
@@ -611,7 +638,6 @@ function HomeContent() {
               Day {promiseDay} of 7 🌱
             </p>
           )}
-          
         </div>
 
         {/* 2. The Tappable Circle (Center) */}
@@ -673,7 +699,7 @@ function HomeContent() {
           </div>
         </button>
 
-        {/* 3. The Locked Message */}
+        {/* 3. The Locked Message / Gist */}
         {!isDone ? (
           <div className="w-full px-2 text-center mt-6 mb-6 animate-fade-in flex flex-col items-center">
             <div className="bg-white border border-[#4A2C35]/10 rounded-2xl p-4 w-full text-center">
@@ -682,29 +708,22 @@ function HomeContent() {
             </div>
           </div>
         ) : (
-          <div className="w-full px-2 text-center mt-6 mb-6 animate-fade-in flex flex-col items-center">
-            <span className="text-[10px] font-bold text-[#9CAF88] uppercase tracking-widest mb-2 bg-white/50 px-3 py-1 rounded-full">
+          <div className="w-full px-4 text-center mt-6 mb-6 animate-fade-in flex flex-col items-center">
+            <span className="text-[10px] font-bold text-[#9CAF88] uppercase tracking-widest mb-3 bg-white/50 px-3 py-1 rounded-full">
               {gist.badge}
             </span>
-            <p className="text-[11px] font-bold text-[#9CAF88] uppercase tracking-widest mb-1">Message from Ovi</p>
-            <p className="text-sm text-[#4A2C35] font-bold mb-1">
+            <p className="text-[11px] font-bold text-[#9CAF88] uppercase tracking-widest mb-2">Message from Ovi</p>
+            <p className="text-[15px] text-[#4A2C35] font-bold mb-2">
               {gist.title}
             </p>
-            <p className="text-xs text-[#4A2C35]/60 leading-relaxed mb-4">
+            
+            {/* Clean Message Block (No boxes) */}
+            <p className="text-[13px] text-[#4A2C35]/70 leading-relaxed mb-4">
               {gist.message}
             </p>
-            {gist.recommendation && (
-              <div className="bg-[#FFF0F3] border border-[#FFB3C1]/30 rounded-xl p-3 inline-block mb-2">
-                <p className="text-xs text-[#8A2C3E] font-medium">
-                  🍲 {gist.recommendation}
-                </p>
-              </div>
-            )}
-            <div className="bg-[#FFF0F3] border border-[#FFB3C1]/30 rounded-xl p-3 inline-block">
-              <p className="text-xs text-[#8A2C3E] font-medium italic">
-                "{gist.action}"
-              </p>
-            </div>
+            <p className="text-[13px] text-[#8A2C3E] leading-relaxed font-medium">
+              {gist.action}
+            </p>
           </div>
         )}
 
@@ -725,10 +744,13 @@ function HomeContent() {
           </div>
         )}
 
-        {/* 5. The Tomorrow Teaser */}
+        {/* 5. The Tomorrow Teaser (Daily Hook) */}
         {isDone && (
-          <div className="w-full bg-white rounded-2xl p-5 mb-4 text-center shadow-sm animate-fade-in border border-[#4A2C35]/5">
-            <p className="text-[10px] font-bold text-[#9CAF88] uppercase tracking-widest mb-2">Tomorrow</p>
+          <div className="w-full bg-white rounded-2xl p-5 mb-4 text-center shadow-sm animate-fade-in border border-[#4A2C35]/5 relative overflow-hidden">
+            <div className="flex items-center justify-center gap-2 mb-2">
+              <p className="text-[10px] font-bold text-[#9CAF88] uppercase tracking-widest">Tomorrow</p>
+              <span className="text-[10px]">🔒</span>
+            </div>
 
             {isLate ? (
               <>
@@ -736,41 +758,57 @@ function HomeContent() {
                   Still waiting with you.
                 </p>
                 <p className="text-xs text-[#4A2C35]/70 leading-relaxed">
-                  Your body is taking its time. That is not a failure. Tomorrow I will check on you again — same calm, same care. Tonight, just rest.
+                  Your body is taking its time. Tomorrow I will check on you again — same calm, same care. 
                 </p>
               </>
             ) : (
               <>
-                <p className="text-sm text-[#4A2C35] font-bold mb-2 leading-snug">
-                  {tomorrowSame
-                    ? "I will check on your rest again."
-                    : nextPhase && nextPhase.name === 'Rest Girl'
-                      ? "Your period might arrive. Rest well tonight."
-                      : `You become ${tomorrowCheck.girlName}.`}
-                </p>
-
-                <p className="text-xs text-[#4A2C35]/70 leading-relaxed">
-                  {tomorrowSame
-                    ? nextPhase
-                      ? `Your body is still in ${dailyCheck.girlName}. ${nextPhase.name} will come in ${nextPhase.days} day${nextPhase.days > 1 ? 's' : ''}. Tonight, just sleep well.`
-                      : `Your body is still in ${dailyCheck.girlName}. Tonight: bed by 10:30.`
-                    : tomorrowCheck.girlName === 'Fresh Girl'
-                      ? "Your bleeding is stopping. Your body is waking up again. You will feel lighter tomorrow."
-                      : tomorrowCheck.girlName === 'Fine Girl'
-                        ? "Your body is getting ready to release an egg. Your energy will go up. Your skin may look clearer. You will have energy for people."
-                        : tomorrowCheck.girlName === 'Chop Girl'
-                          ? "Your body is burning energy fast now. That is why you will feel hungry and want sweet or starchy food. It is not greed, it is your body asking for fuel."
-                          : tomorrowCheck.girlName === 'Ready Girl'
-                            ? "Your body is slowing down to prepare for your period. You may feel tired, moody, or bloated. That is normal. Don't fight it."
-                            : tomorrowCheck.girlName === 'Rest Girl'
-                              ? "Your body is getting ready to bleed. You may feel heavy and tired. That is your body working hard. Rest."
-                              : ""}
-                </p>
-
-                {gist.nextGirlPrep && (
-                  <p className="text-[11px] text-[#8A2C3E] leading-relaxed bg-[#FFF0F3] py-3 px-4 rounded-xl mt-3 font-medium">
-                    {gist.nextGirlPrep}
-                  </p>
+                {nextPhase && nextPhase.days === 1 ? (
+                  // LAST DAY: Meet the new Girl
+                  <>
+                    <p className="text-sm text-[#4A2C35] font-bold mb-2 leading-snug">
+                      {nextPhase.name === 'Rest Girl' 
+                        ? "Your period might arrive." 
+                        : "Tomorrow you become someone new."}
+                    </p>
+                    <p className="text-xs text-[#4A2C35]/70 leading-relaxed mb-4">
+                      {tomorrowCheck.girlName === 'Fresh Girl'
+                        ? "Your bleeding is stopping. Your body is waking up again."
+                        : tomorrowCheck.girlName === 'Fine Girl'
+                          ? "Your energy will go up. Your skin may look clearer."
+                          : tomorrowCheck.girlName === 'Chop Girl'
+                            ? "Your body is burning energy fast now. You will feel hungry."
+                            : tomorrowCheck.girlName === 'Ready Girl'
+                              ? "Your body is slowing down to prepare for your period."
+                              : "Your body is getting ready to bleed. Rest."}
+                    </p>
+                    <div className="bg-[#FFF0F3] border border-[#FF8FA3]/20 rounded-xl py-3 px-4 inline-block">
+                      <p className="text-[11px] text-[#8A2C3E] font-bold">
+                        Come back tomorrow morning to meet {nextPhase.name}.
+                      </p>
+                    </div>
+                  </>
+                ) : (
+                  // MIDDLE OF PHASE: Use the Daily Teaser from our new file
+                  <>
+                    <p className="text-sm text-[#4A2C35] font-bold mb-2 leading-snug">
+                      Tomorrow you are still {dailyCheck.girlName}.
+                    </p>
+                    <p className="text-xs text-[#4A2C35]/70 leading-relaxed mb-4">
+                      {(() => {
+                        // Calculate her day in phase (0-indexed) to pick the right teaser
+                        const dayIndex = Math.max(0, cycleData.currentDay - 1);
+                        const girlTeasers = DAILY_TEASERS[dailyCheck.girlName] || [];
+                        // Pull the teaser, or the last one if she is on a really long phase
+                        return girlTeasers[Math.min(dayIndex, girlTeasers.length - 1)] || "I have a new thought for you.";
+                      })()}
+                    </p>
+                    <div className="bg-[#FFF0F3] border border-[#FF8FA3]/20 rounded-xl py-3 px-4 inline-block">
+                      <p className="text-[11px] text-[#8A2C3E] font-bold">
+                        Come back tomorrow to unlock it.
+                      </p>
+                    </div>
+                  </>
                 )}
               </>
             )}

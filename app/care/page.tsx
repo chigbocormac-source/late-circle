@@ -3,6 +3,7 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { localDateKey } from '../../utils/analytics';
+import AccountCard from '../components/AccountCard';
 
 function CareContent() {
   const router = useRouter();
@@ -153,6 +154,22 @@ function CareContent() {
               <h2 className="text-lg font-bold text-[#4A2C35] mb-1">You Place</h2>
               <p className="text-xs text-[#4A2C35]/60 leading-relaxed">Build your story small small. When you are ready, generate your Doctor PDF.</p>
             </button>
+
+            <AccountCard />
+
+            <div className="w-full text-center mt-2 mb-6">
+              <p className="text-[10px] text-[#4A2C35]/40 leading-relaxed px-2 mb-3">
+                By using Late Circle, you agree to our
+              </p>
+              <div className="flex justify-center items-center gap-3">
+                <a href="/privacy" className="px-4 py-2 rounded-full bg-white border border-[#4A2C35]/10 text-[10px] font-bold text-[#4A2C35]/60 active:scale-95 transition-transform">
+                  Privacy Policy
+                </a>
+                <a href="/terms" className="px-4 py-2 rounded-full bg-white border border-[#4A2C35]/10 text-[10px] font-bold text-[#4A2C35]/60 active:scale-95 transition-transform">
+                  Terms of Service
+                </a>
+              </div>
+            </div>
           </div>
         </div>
       )}
@@ -162,7 +179,7 @@ function CareContent() {
           <button onClick={() => setShowSoftPlace(false)} className="text-[#4A2C35]/50 text-sm font-medium active:opacity-50 mb-6 self-start">← Back</button>
 
           <div className="text-center mb-8">
-            <h1 className="text-2xl font-bold text-[#4A2C35] mb-2">Welcome home, Fine Girl.</h1>
+            <h1 className="text-2xl font-bold text-[#4A2C35] mb-2">Welcome home, Love.</h1>
             <p className="text-xs text-[#4A2C35]/60">This Soft Place is only yours. No one else will see it.</p>
           </div>
 
@@ -288,7 +305,7 @@ function CareContent() {
             <h2 className="text-[10px] font-bold text-[#9CAF88] uppercase tracking-widest mb-4">For Future You</h2>
             {!savedLine ? (
               <>
-                <p className="text-sm text-[#4A2C35] leading-relaxed mb-4">Fine Girl, if next month you are waiting again, what do you want to tell yourself? Write one line. I will keep it for you.</p>
+                <p className="text-sm text-[#4A2C35] leading-relaxed mb-4">Love, if next month you are waiting again, what do you want to tell yourself? Write one line. I will keep it for you.</p>
                 <textarea value={futureLine} onChange={(e) => setFutureLine(e.target.value)} placeholder="Write to future you..." className="w-full h-24 bg-[#FFF0F3] text-[#4A2C35] p-4 rounded-xl border border-[#4A2C35]/10 focus:outline-none focus:border-[#FF8FA3] resize-none text-sm mb-3" />
                 <button onClick={handleSaveFutureLine} className="w-full bg-[#9CAF88] text-white py-3 rounded-full font-bold active:scale-95 text-sm">Save My Line In My Soft Place</button>
               </>

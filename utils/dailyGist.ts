@@ -3,7 +3,6 @@ export interface GistData {
   message: string;
   action: string;
   badge: string | null;
-  recommendation?: string;
   nextGirlPrep?: string;
 }
 
@@ -248,39 +247,10 @@ export function getDailyGist(
   const content = list[pickIndex(dayInPhase, length, list.length)];
 
   let message = content.message;
-  let recommendation = undefined;
   let nextGirlPrep = undefined;
 
-  // THE HEALING FOOD RECOMMENDATIONS
-  if (id === 'fine' || id === 'chop') {
-    if (lastFood) {
-      message = `I saw you ate ${lastFood} yesterday. ${message}`;
-    }
-    
-    const recommendations = [
-      "Try this plate: Rice + Beans + Fish. The protein and fiber slow the sugar spike.",
-      "Try this plate: Eba + Egusi + Fish. The soup and fish keep you full and steady.",
-      "Try this plate: Yam + Egg + Vegetables. The egg and veg balance the starch.",
-      "Try this plate: Bread + Egg + Tomato. A quick snack becomes a real meal.",
-      "Try this plate: Indomie + Egg + Spinach. The protein and iron keep your energy steady.",
-      "Try this plate: Plantain + Beans + Fish. The beans and fish slow the sugar spike."
-    ];
-    recommendation = recommendations[dayInPhase % recommendations.length];
-  }
-
-  if (id === 'rest') {
-    recommendation = "Try this: Ugu or beans with tomato or orange. The vitamin C helps your body absorb iron.";
-  }
-
-  if (id === 'fresh') {
-    recommendation = "Try this: A 20-minute walk after your biggest meal. It helps your body use sugar better.";
-  }
-
-  if (id === 'ready') {
-    recommendation = "Try this: 90 seconds of deep breathing. It tells your body it is safe to release.";
-  }
-
-  // THE PREP FOR TOMORROW
+  // THE PREP FOR TOMORROW (The Hook)
+  // This text shows up in the "Tomorrow" card on the Today page
   if (id === 'rest') {
     nextGirlPrep = "Tomorrow you will feel lighter. Take a short walk to the junction and back. Eat something with protein, like egg or beans, so your energy stays steady.";
   }
@@ -302,7 +272,6 @@ export function getDailyGist(
     message: message,
     action: content.action,
     badge: badge,
-    recommendation: recommendation,
     nextGirlPrep: nextGirlPrep
   };
 }

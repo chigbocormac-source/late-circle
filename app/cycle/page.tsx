@@ -127,6 +127,30 @@ export default function CyclePage() {
   const isLastPeriod = (d: Date) => lastPeriodDate && isSameDay(d, new Date(lastPeriodDate));
   const isHistoryDay = (d: Date) => history.some(h => isSameDay(d, new Date(h)));
 
+  // SMART CALENDAR COLOR LOGIC
+  const getPhaseColor = (dateToCheck: Date) => {
+    if (!lastPeriodDate) return 'bg-transparent text-[#4A2C35]/70';
+    
+    const last = new Date(lastPeriodDate);
+    last.setHours(0,0,0,0);
+    const check = new Date(dateToCheck);
+    check.setHours(0,0,0,0);
+    
+    const diffDays = Math.floor((check.getTime() - last.getTime()) / (1000 * 60 * 60 * 24));
+    const simulatedDay = (diffDays % average) + 1; // Wrap around if looking into future months
+    
+    const phase = getCyclePhase(simulatedDay, average);
+    
+    switch (phase.id) {
+      case 'rest': return 'bg-[#FFE5EC] text-[#8A2C3E]'; 
+      case 'fresh': return 'bg-[#F0F5ED] text-[#5A7350]'; 
+      case 'fine': return 'bg-[#FFF8E7] text-[#B58B22]'; 
+      case 'chop': return 'bg-[#FFF0E6] text-[#C76B2B]'; 
+      case 'ready': return 'bg-[#F3E8FF] text-[#7E57C2]'; 
+      default: return 'bg-transparent text-[#4A2C35]/70';
+    }
+  };
+
   const handlePeriodStart = () => {
     const d = new Date();
     const todayStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -212,35 +236,43 @@ export default function CyclePage() {
   const girlData: Record<string, any> = {
     rest: { 
       title: "🌙 Rest Girl", 
-      days: "First 18% of your cycle", 
+      days: "First 15% of your cycle", 
       why: "Your body is bleeding. It takes energy. That is why you feel tired.", 
       feel: "Cramps, low energy, wanting hot water.", 
       want: "Soft rice, small Indomie, hot tea, sleep.", 
-      circles: "Focus: Sleep + Calm.\nFood is okay if you eat small.\nLeave Walk open. You are resting." 
+      circles: "Your One Focus: Sleep. Your body is rebuilding. Leave the rest for later." 
     },
     fresh: { 
       title: "🌱 Fresh Girl", 
-      days: "18% to 48% of your cycle", 
+      days: "15% to 35% of your cycle", 
       why: "Bleeding has stopped. Your energy is coming back.", 
       feel: "Energy returning, less tired, wanting to talk.", 
       want: "Normal appetite, to go out small.", 
-      circles: "Focus: Walk + Food.\nThis is your best time to build a streak." 
+      circles: "Your One Focus: Walk. Your energy is coming back. Just move a little." 
+    },
+    fine: { 
+      title: "✨ Fine Girl", 
+      days: "35% to 60% of your cycle", 
+      why: "Your body is getting ready to release an egg. This is your peak. Your energy, your skin, and your confidence are at their highest.", 
+      feel: "Glowing skin, high energy, feeling social and beautiful.", 
+      want: "To go out, see friends, wear something nice, and eat good food that keeps the glow.", 
+      circles: "Your One Focus: Food. Give your body good fuel to keep this glow." 
     },
     chop: { 
       title: "🍚 Chop Girl", 
-      days: "48% to 58% of your cycle", 
-      why: "Your body is burning energy fast. This is your peak phase, and your body wants fuel.", 
-      feel: "High energy, then hungry and craving sweet or starchy food.", 
-      want: "Indomie, garri, puff puff, shawarma, but also to go out and be social.", 
-      circles: "Focus: Food + Calm.\nAdd protein to your plate.\nWalk is optional." 
+      days: "60% to 80% of your cycle", 
+      why: "Progesterone is rising. Your body is slowing down and preparing for your period. This is why you feel hungry and crave carbs.", 
+      feel: "Slower, bloated, craving sweet or starchy food.", 
+      want: "Indomie, eba, sweet things, and warmth.", 
+      circles: "Your One Focus: Food. Warm food to ground your body and calm the cravings." 
     },
     ready: { 
       title: "💜 Ready Girl", 
-      days: "58% to 100% of your cycle", 
-      why: "Your period is close. Your body is slowing down and preparing.", 
+      days: "80% to 100% of your cycle", 
+      why: "Your period is close. Your body is waiting.", 
       feel: "Tired, moody, bloated, tender breasts.", 
       want: "To stay inside, sleep, ice cream, sweet names.", 
-      circles: "Focus: Sleep + Calm.\nLeave Food and Walk open if you are tired.\nKeep a pad in your bag." 
+      circles: "Your One Focus: Calm. Breathe. You are safe. The waiting is almost over." 
     }
   };
 
@@ -386,19 +418,37 @@ export default function CyclePage() {
           <div className="grid grid-cols-7 gap-1 text-center text-[11px]">
             {calendarDays.map((d, i) => {
               if (!d) return <div key={i} />;
+              
               const todayIs = isSameDay(d, new Date());
               const inWin = inWindow(d);
               const lastP = isLastPeriod(d);
               const hist = isHistoryDay(d);
+              const phaseColorClass = getPhaseColor(d);
+
               return (
-                <div key={i} className={`py-2 rounded-lg font-medium relative ${inWin ? 'bg-[#FF8FA3] text-white font-bold' : todayIs ? 'bg-[#4A2C35] text-white font-bold' : lastP || hist ? 'bg-[#FFF0F3] text-[#8A2C3E] font-bold' : 'text-[#4A2C35]/70'}`}>
+                <div key={i} className={`py-2 rounded-xl font-medium relative transition-colors ${
+                  todayIs ? 'bg-[#4A2C35] text-white font-bold shadow-md' 
+                  : inWin ? 'bg-[#FF8FA3] text-white font-bold' 
+                  : lastP || hist ? 'bg-[#8A2C3E] text-white font-bold' 
+                  : phaseColorClass
+                }`}>
                   {d.getDate()}
-                  {(lastP || hist) && !inWin && !todayIs && <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 bg-[#FF8FA3] rounded-full" />}
+                  {(lastP || hist) && !inWin && !todayIs && <span className="absolute bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 bg-white rounded-full opacity-70" />}
                 </div>
               );
             })}
           </div>
-          <p className="text-[9px] text-[#4A2C35]/50 mt-2 text-center">
+          
+          {/* MINI LEGEND */}
+          <div className="flex flex-wrap justify-center gap-2 mt-4 pt-3 border-t border-[#4A2C35]/5 text-[9px] font-bold text-[#4A2C35]/50 uppercase tracking-wider">
+            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-[#FFE5EC] border border-[#FF8FA3]"></span> Rest</span>
+            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-[#F0F5ED] border border-[#9CAF88]"></span> Fresh</span>
+            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-[#FFF8E7] border border-[#D4AF37]"></span> Fine</span>
+            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-[#FFF0E6] border border-[#FF8FA3]"></span> Chop</span>
+            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-[#F3E8FF] border border-[#8A2C3E]"></span> Ready</span>
+          </div>
+
+          <p className="text-[9px] text-[#4A2C35]/50 mt-3 text-center">
             Expected: {windowStart.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} - {windowEnd.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
           </p>
         </div>
@@ -453,7 +503,7 @@ export default function CyclePage() {
       )}
 
       <button onClick={() => { setSelectedGirl(girl.id); logEvent('girl_explainer_opened', { girl: girl.id }); }} className="w-full max-w-sm bg-white border border-[#4A2C35]/5 rounded-2xl p-4 flex justify-between items-center shadow-[0_8px_20px_-8px_rgba(74,44,53,0.08)] active:scale-[0.98] transition-transform mb-3">
-        <div className="flex items-center gap-3"><span className="text-xl">{girl.emoji}</span><div className="text-left"><h3 className="text-sm font-bold text-[#4A2C35]">Understand Your 4 Girls</h3><p className="text-[10px] text-[#4A2C35]/50">Why you feel different every week.</p></div></div>
+        <div className="flex items-center gap-3"><span className="text-xl">{girl.emoji}</span><div className="text-left"><h3 className="text-sm font-bold text-[#4A2C35]">Understand Your 5 Girls</h3><p className="text-[10px] text-[#4A2C35]/50">Why you feel different every week.</p></div></div>
         <span className="text-[#4A2C35]/30 text-lg">›</span>
       </button>
 
@@ -507,14 +557,14 @@ export default function CyclePage() {
 
       {selectedGirl && (() => {
         const data = girlData[selectedGirl];
-        const order = ['rest', 'fresh', 'chop', 'ready'];
-        const emojis: Record<string, string> = { rest: '🌙', fresh: '🌱', chop: '🍚', ready: '💜' };
-        const labels: Record<string, string> = { rest: 'Rest', fresh: 'Fresh', chop: 'Chop', ready: 'Ready' };
+        const order = ['rest', 'fresh', 'fine', 'chop', 'ready'];
+        const emojis: Record<string, string> = { rest: '🌙', fresh: '🌱', fine: '✨', chop: '🍚', ready: '💜' };
+        const labels: Record<string, string> = { rest: 'Rest', fresh: 'Fresh', fine: 'Fine', chop: 'Chop', ready: 'Ready' };
         return (
           <div className="fixed inset-0 bg-[#4A2C35]/20 backdrop-blur-sm z-100 flex items-start justify-center p-4 pt-6 pb-28 overflow-y-auto animate-fade-in" onClick={() => setSelectedGirl(null)}>
             <div className="w-full max-w-sm bg-white rounded-3xl p-6 shadow-[0_24px_48px_-16px_rgba(74,44,53,0.25)] animate-slide-up" onClick={(e) => e.stopPropagation()}>
               <div className="flex justify-between items-center mb-4">
-                <h2 className="text-lg font-bold text-[#4A2C35]">Your 4 Girls</h2>
+                <h2 className="text-lg font-bold text-[#4A2C35]">Your 5 Girls</h2>
                 <button onClick={() => setSelectedGirl(null)} className="w-8 h-8 rounded-full bg-[#FFF0F3] flex items-center justify-center text-[#4A2C35]/60 font-bold active:scale-95">✕</button>
               </div>
 
@@ -544,7 +594,7 @@ export default function CyclePage() {
                 <div><h3 className="text-[10px] font-bold text-[#4A2C35]/40 uppercase tracking-widest mb-1">You will want</h3><p className="text-sm text-[#4A2C35] leading-relaxed">{data.want}</p></div>
                 <div><h3 className="text-[10px] font-bold text-[#4A2C35]/40 uppercase tracking-widest mb-1">Your circles</h3><p className="text-sm text-[#4A2C35] leading-relaxed whitespace-pre-line">{data.circles}</p></div>
               </div>
-              <p className="text-[10px] text-[#4A2C35]/40 text-center mb-4 leading-relaxed">35 days is not 1 mood. It's 4 girls. This is your pattern, not everybody's. Not medical. Just your pattern.</p>
+              <p className="text-[10px] text-[#4A2C35]/40 text-center mb-4 leading-relaxed">35 days is not 1 mood. It's 5 girls. This is your pattern, not everybody's. Not medical. Just your pattern.</p>
               <button onClick={handleShareGirl} disabled={shareBusy} className="w-full bg-[#9CAF88] text-white py-3 rounded-full font-bold active:scale-95 shadow-[0_8px_20px_-4px_rgba(156,175,136,0.3)] mb-2 disabled:opacity-60">{shareBusy ? 'Preparing…' : 'Share this Girl →'}</button>
               <button onClick={() => setSelectedGirl(null)} className="w-full bg-[#4A2C35] text-white py-3 rounded-full font-bold active:scale-95 shadow-[0_8px_20px_-4px_rgba(74,44,53,0.2)]">Got it, Ovi</button>
             </div>

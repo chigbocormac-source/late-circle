@@ -2,7 +2,9 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { getOviReply, ChatState } from '@/utils/chatEngine';
+import { getOviReply, ChatState, UserCycleData, TOPIC_MENU } from '@/utils/chatEngine';
+import { getCyclePhase, getRealCycleLength } from '../../utils/cycleEngine';
+import { localDateKey } from '../../utils/analytics';
 
 type Message = {
   id: string;
@@ -11,6 +13,54 @@ type Message = {
   isEmergency?: boolean;
   chips?: string[];
 };
+
+// --- Shared cycle-day math (mirrors today/page.tsx) ---
+function getCycleData(lastPeriodDateString: string | null, cycleLengths: number[] = []) {
+  if (!lastPeriodDateString) return { currentDay: 1, average: 35, lateDays: 0 };
+  const lastPeriod = new Date(lastPeriodDateString);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  lastPeriod.setHours(0, 0, 0, 0);
+  const diffTime = Math.abs(today.getTime() - lastPeriod.getTime());
+  const currentDay = Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
+
+  let average = 35;
+  if (cycleLengths.length > 0) {
+    average = Math.round(cycleLengths.reduce((a, b) => a + b, 0) / cycleLengths.length);
+  }
+  const lateDays = currentDay - average;
+  return { currentDay, average, lateDays: lateDays > 0 ? lateDays : 0 };
+}
+
+// --- Read her real data from localStorage ---
+function getUserCycleData(): UserCycleData | undefined {
+  if (typeof window === 'undefined') return undefined;
+
+  const lastPeriod = localStorage.getItem('lateCircleLastPeriod');
+  if (!lastPeriod) return undefined;
+
+  const prevPeriod = localStorage.getItem('lateCirclePrevPeriod');
+  const cycleType = localStorage.getItem('lateCircleType');
+
+  // average = the same value your app already uses everywhere
+  const realAvg = getRealCycleLength(lastPeriod, prevPeriod, cycleType);
+  const { currentDay, average, lateDays } = getCycleData(lastPeriod, [realAvg]);
+
+  // phase name from your real 5 girls
+  const phase = getCyclePhase(currentDay, average);
+
+  // has she logged bleeding today?
+  const lastBleedDate = localStorage.getItem('lateCircleLastBleedDate');
+  const hasLoggedBleedingToday = lastBleedDate === localDateKey();
+
+  return {
+    currentDay,
+    average,
+    lateDays,
+    phase: phase.name,   // 'Rest Girl' | 'Fresh Girl' | 'Fine Girl' | 'Chop Girl' | 'Ready Girl'
+    hasLoggedBleedingToday,
+  };
+}
 
 export default function OviChat() {
   const router = useRouter();
@@ -31,8 +81,8 @@ export default function OviChat() {
         setMessages([{
           id: '1',
           role: 'ovi',
-          text: "Fine girl, I am here. How are you feeling tonight? You don't have to type too much. Just tap what you feel.",
-          chips: ["I am scared", "My period is late", "I need Soft Place", "I am tired"]
+          text: "Love, I am here. How are you feeling tonight? What do you want to understand today?",
+          chips: ["My period is late", "Pregnancy Fear", "My Period", "Ovulation", "I need Soft Place"]
         }]);
       }, 500);
     }
@@ -47,7 +97,9 @@ export default function OviChat() {
     setIsTyping(true);
 
     setTimeout(() => {
-      const reply = getOviReply(text, chatState);
+      // Read her real data at send-time, and pass it in
+      const userData = getUserCycleData();
+      const reply = getOviReply(text, chatState, userData);
       setChatState(reply.newState);
 
       const oviMsg: Message = {
@@ -61,19 +113,17 @@ export default function OviChat() {
       setMessages(prev => [...prev, oviMsg]);
       setIsTyping(false);
 
-      // --- HANDLE ACTIONS (NAVIGATION) ---
       if (reply.action === 'OPEN_SOFT_PLACE') {
         setTimeout(() => {
-          router.push('/care?open=softplace'); // <--- Routes to Care but opens Soft Place
-        }, 2500); 
+          router.push('/care?open=softplace');
+        }, 2500);
       }
-      
+
       if (reply.action === 'OPEN_YOU_PLACE') {
         setTimeout(() => {
           router.push('/care/you-place');
-        }, 2500); 
+        }, 2500);
       }
-      
     }, 1500);
   };
 
@@ -84,7 +134,7 @@ export default function OviChat() {
           <div className="w-20 h-20 mx-auto rounded-full bg-linear-to-tr from-[#FF8FA3] to-[#9CAF88] animate-orb-breathe mb-6"></div>
           <h2 className="text-xl font-bold text-[#4A2C35] mb-2">Ovi is here</h2>
           <p className="text-[#8A2C3E] text-sm mb-8">
-            Fine girl, I am here. Sometimes I save our chats so I can learn how to hold you better. Is that okay?
+            Love, I am here. Sometimes I save our chats so I can learn how to hold you better. Is that okay?
           </p>
           <div className="flex flex-col gap-3">
             <button onClick={() => setHasConsent(true)} className="w-full py-3 rounded-full bg-[#9CAF88] text-white font-semibold hover:bg-opacity-90 transition">
@@ -119,7 +169,7 @@ export default function OviChat() {
               : msg.isEmergency ? 'bg-red-100 border-2 border-red-400 text-red-800 rounded-tl-sm'
               : 'bg-[#D1DCC6] text-[#4A2C35] rounded-tl-sm'
             }`}>
-              <p className="text-sm font-medium leading-relaxed">{msg.text}</p>
+              <p className="text-sm font-medium leading-relaxed whitespace-pre-wrap">{msg.text}</p>
               {msg.isEmergency && (
                 <div className="mt-3 flex flex-col gap-2">
                   <a href="tel:112" className="block text-center bg-red-600 text-white py-2 rounded-full text-sm font-bold">Call 112 Emergency</a>
