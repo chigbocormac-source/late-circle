@@ -2,11 +2,14 @@ import type { MetadataRoute } from 'next';
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
+    id: '/',
     name: 'Late Circle',
     short_name: 'Ovi',
     description: 'A soft space for girls with late periods.',
     start_url: '/today',
+    scope: '/',
     display: 'standalone',
+    orientation: 'portrait',
     background_color: '#FFF0F3',
     theme_color: '#FFF0F3',
     icons: [
@@ -27,12 +30,6 @@ export default function manifest(): MetadataRoute.Manifest {
         sizes: '512x512',
         type: 'image/png',
         purpose: 'maskable',
-      },
-      {
-        src: '/icon.svg',
-        sizes: 'any',
-        type: 'image/svg+xml',
-        purpose: 'any',
       },
     ],
   };
