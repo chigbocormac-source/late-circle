@@ -212,6 +212,13 @@ export default function CyclePage() {
     finally { setShareBusy(false); }
   };
 
+  // --- FIXED: Ask Ovi now carries her Girl + Day + average ---
+const handleAskOvi = () => {
+  const q = `Why do I feel like this? Explain my body. I am on Day ${currentDay}, ${girl.name} Girl, my average is ${average} days.`;
+  logEvent('girl_explainer_opened', { girl: girl.id });
+  router.push(`/chat?ask=${encodeURIComponent(q)}`);
+};
+
   const whatsappMessage = lateDays > 0 
     ? `I am ${lateDays} day${lateDays > 1 ? 's' : ''} late and a bit worried. Can we talk?`
     : `My period is expected around ${windowStart.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}. I am on Day ${currentDay}.`;
@@ -226,46 +233,51 @@ export default function CyclePage() {
 
   const showStartButton = lateDays > 0 || currentDay >= average - 3 || currentDay <= 1;
 
+  // --- UPDATED: Science + anecdote, same voice as Ovi in chat ---
   const girlData: Record<string, any> = {
     rest: { 
       title: "🌙 Rest Girl", 
-      days: "First 15% of your cycle", 
-      why: "Your body is bleeding. It takes energy. That is why you feel tired.", 
-      feel: "Cramps, low energy, wanting hot water.", 
-      want: "Soft rice, small Indomie, hot tea, sleep.", 
+      days: "First 15% of your cycle — Days 1 to ~5, bleeding days", 
+      why: "Your body is letting go of the lining it built last month. To do that, it makes something called prostaglandins. They make your womb squeeze to push the blood out. That squeezing is the cramp you feel. And because you are losing blood, your energy drops.", 
+      feel: "Cramps, low energy, wanting hot water, wanting to be left alone.", 
+      want: "Soft rice, small Indomie, hot tea, sleep. Rest is not laziness.", 
+      anecdote: "You know after you wash a big pile of clothes and your arms are shaking? That's your womb right now. It has been working.",
       circles: "Your One Focus: Sleep. Your body is rebuilding. Leave the rest for later." 
     },
     fresh: { 
       title: "🌱 Fresh Girl", 
-      days: "15% to 35% of your cycle", 
-      why: "Bleeding has stopped. Your energy is coming back.", 
-      feel: "Energy returning, less tired, wanting to talk.", 
-      want: "Normal appetite, to go out small.", 
+      days: "15% to 35% of your cycle — right after bleeding stops", 
+      why: "Bleeding has stopped. Your estrogen is starting to rise again. Estrogen is like sun after rain — it lifts your mood, your energy, your skin starts to clear. Your body is cleaning up and starting again.", 
+      feel: "Energy returning, less tired, wanting to talk, wanting to go out small.", 
+      want: "Normal appetite, to go out small, to laugh again.", 
+      anecdote: "You know after NEPA brings light after 2 days and you can finally charge your phone and feel normal again? That is Fresh Girl. Your body is charging again.",
       circles: "Your One Focus: Walk. Your energy is coming back. Just move a little." 
     },
     fine: { 
       title: "✨ Fine Girl", 
-      days: "35% to 60% of your cycle", 
-      why: "Your body is getting ready to release an egg. This is your peak. Your energy, your skin, and your confidence are at their highest.", 
-      feel: "Glowing skin, high energy, feeling social and beautiful.", 
+      days: "35% to 60% of your cycle — around ovulation, your peak", 
+why: "You are in your Fine Girl days. Many girls feel glowing, confident, and social around this time. You may notice clear, stretchy discharge — like egg white. That kind of discharge can appear when your body is getting closer to ovulation. Your average is 38 days, so ovulation may still be a few days away for you.",      feel: "Glowing skin, high energy, feeling social and beautiful.", 
       want: "To go out, see friends, wear something nice, and eat good food that keeps the glow.", 
-      circles: "Your One Focus: Food. Give your body good fuel to keep this glow." 
+      anecdote: "You know that one week where your pictures just come out fine, your clothes fit fine, even strangers are smiling at you? That's not coincidence. That's Fine Girl.",
+      circles: "Your One Focus: Food. Give your body good fuel to keep this glow. And gently — because the egg is out, this is when pregnancy can happen if you have sex without protection." 
     },
     chop: { 
       title: "🍚 Chop Girl", 
-      days: "60% to 80% of your cycle", 
-      why: "Progesterone is rising. Your body is slowing down and preparing for your period. This is why you feel hungry and crave carbs.", 
-      feel: "Slower, bloated, craving sweet or starchy food.", 
+      days: "60% to 80% of your cycle — after ovulation", 
+      why: "After ovulation, a hormone called progesterone rises. Progesterone slows your digestion, makes you feel bloated, makes you crave carbs and sweet things, and makes you sleepy. Your body is preparing — if pregnancy happens, it needs to hold the lining. If not, it will let it go.", 
+      feel: "Slower, bloated, craving sweet or starchy food, sleepy.", 
       want: "Indomie, eba, sweet things, and warmth.", 
-      circles: "Your One Focus: Food. Warm food to ground your body and calm the cravings." 
+      anecdote: "You know when you cook a big pot of soup and you keep going to the kitchen to taste it, taste it, taste it? Your body is doing that — tasting, checking, wanting more fuel.",
+      circles: "Your One Focus: Food. Warm food to ground your body and calm the cravings. You are not greedy. Your body is asking for fuel." 
     },
     ready: { 
       title: "💜 Ready Girl", 
-      days: "80% to 100% of your cycle", 
-      why: "Your period is close. Your body is waiting.", 
-      feel: "Tired, moody, bloated, tender breasts.", 
+      days: "80% to 100% of your cycle — days before period", 
+      why: "If pregnancy did not happen, estrogen and progesterone drop sharply. That drop is why you feel moody, cry easily, breasts hurt, you feel bloated, you want to be alone and held at the same time. Doctors call this PMS. It is real. It is hormones falling, not you being a bad person.", 
+      feel: "Tired, moody, bloated, tender breasts, wanting to cry and be held.", 
       want: "To stay inside, sleep, ice cream, sweet names.", 
-      circles: "Your One Focus: Calm. Breathe. You are safe. The waiting is almost over." 
+      anecdote: "You know when you have been waiting for your period, checking your pad every hour, and you are just tired of waiting? That's Ready Girl. She is sitting by the door with her bag packed, waiting for period to come.",
+      circles: "Your One Focus: Calm. Breathe. You are safe. Don't make big decisions in Ready Girl. The waiting is almost over." 
     }
   };
 
@@ -277,6 +289,9 @@ export default function CyclePage() {
     localStorage.setItem('lateCircleAcknowledgedLateWarning', todayKey);
     setShowLateWarning(false);
   };
+
+  // --- Your body, explained - uses the girl she already is today ---
+  const currentGirlData = girlData[girl.id];
 
   return (
     <main className="min-h-screen bg-[#F1EBFF] text-[#4A2C35] flex flex-col items-center pt-8 px-6 pb-32 font-sans relative animate-page-enter">
@@ -317,6 +332,43 @@ export default function CyclePage() {
           )}
         </div>
       </button>
+
+      {/* YOUR BODY, EXPLAINED — replaces "Show me myself" chip */}
+      <div className="w-full max-w-sm bg-white border border-[#4A2C35]/5 rounded-3xl p-5 mb-4 shadow-sm">
+        <p className="text-[11px] text-[#8A2C3E]/70 tracking-wide mb-2">Your body today</p>
+        <p className="text-[15px] text-[#4A2C35] leading-relaxed">
+          You are on Day {currentDay}. Right now you are {currentGirlData?.title?.replace(/^[^\s]+\s/, '') ?? girl.name}.
+        </p>
+        <p className="text-[14px] text-[#4A2C35]/70 leading-relaxed mt-2">
+          {currentGirlData?.why}
+        </p>
+        <p className="text-[14px] text-[#4A2C35]/70 leading-relaxed mt-2">
+          That is why you may feel: {currentGirlData?.feel?.toLowerCase()}
+        </p>
+        {lateDays > 0 ? (
+          <p className="text-[14px] text-[#4A2C35]/70 leading-relaxed mt-2">
+            You are {lateDays} {lateDays === 1 ? 'day' : 'days'} past your average of {average} days. That does not mean something is wrong — it means this cycle is taking a little longer.
+          </p>
+        ) : (
+          <p className="text-[14px] text-[#4A2C35]/70 leading-relaxed mt-2">
+            Your average is {average} days. Your next period window is {windowStart.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} - {windowEnd.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}.
+          </p>
+        )}
+        <div className="flex flex-wrap gap-2 mt-4">
+          <button
+            onClick={() => { setSelectedGirl(girl.id); logEvent('girl_explainer_opened', { girl: girl.id }); }}
+            className="px-4 py-2.5 bg-[#FFF9F3] border border-[#D8DFD0] text-[#4A2C35] rounded-full text-[13px] font-normal active:bg-[#EDEFE7] transition"
+          >
+            Why do I feel like this?
+          </button>
+          <button
+            onClick={handleAskOvi}
+            className="px-4 py-2.5 bg-white border border-[#D8DFD0] text-[#4A2C35] rounded-full text-[13px] font-normal active:bg-[#EDEFE7] transition"
+          >
+            Ask Ovi about my body →
+          </button>
+        </div>
+      </div>
 
       {lateDays > 0 && lateDays <= 2 && showLateWarning && (
         <div className="w-full max-w-sm bg-white border border-[#9CAF88]/30 p-4 rounded-2xl mb-4 shadow-sm animate-fade-in">
@@ -577,14 +629,19 @@ export default function CyclePage() {
               <p className="text-xs text-[#4A2C35]/50 font-medium mb-6">{data.days}</p>
               <div className="flex flex-col gap-4 mb-6">
                 <div className="bg-[#F1EBFF] rounded-xl p-3 border border-[#4A2C35]/5">
-                  <h3 className="text-[10px] font-bold text-[#4A2C35]/40 uppercase tracking-widest mb-1">Why this is happening</h3>
+                  <h3 className="text-[10px] font-bold text-[#4A2C35]/40 uppercase tracking-widest mb-1">Why this is happening — the science</h3>
                   <p className="text-sm text-[#4A2C35] leading-relaxed font-medium">{data.why}</p>
+                </div>
+                <div className="bg-[#FFF9F3] rounded-xl p-3 border border-[#D8DFD0]">
+                  <h3 className="text-[10px] font-bold text-[#4A2C35]/40 uppercase tracking-widest mb-1">Think of it like this</h3>
+                  <p className="text-sm text-[#4A2C35] leading-relaxed italic">{data.anecdote}</p>
                 </div>
                 <div><h3 className="text-[10px] font-bold text-[#4A2C35]/40 uppercase tracking-widest mb-1">You will feel</h3><p className="text-sm text-[#4A2C35] leading-relaxed">{data.feel}</p></div>
                 <div><h3 className="text-[10px] font-bold text-[#4A2C35]/40 uppercase tracking-widest mb-1">You will want</h3><p className="text-sm text-[#4A2C35] leading-relaxed">{data.want}</p></div>
                 <div><h3 className="text-[10px] font-bold text-[#4A2C35]/40 uppercase tracking-widest mb-1">Your circles</h3><p className="text-sm text-[#4A2C35] leading-relaxed whitespace-pre-line">{data.circles}</p></div>
               </div>
               <p className="text-[10px] text-[#4A2C35]/40 text-center mb-4 leading-relaxed">35 days is not 1 mood. It's 5 girls. This is your pattern, not everybody's. Not medical. Just your pattern.</p>
+              <button onClick={handleAskOvi} className="w-full bg-white border border-[#4A2C35]/15 text-[#4A2C35] py-3 rounded-full font-bold active:scale-95 mb-2">Ask Ovi about this Girl →</button>
               <button onClick={handleShareGirl} disabled={shareBusy} className="w-full bg-[#9CAF88] text-white py-3 rounded-full font-bold active:scale-95 shadow-[0_8px_20px_-4px_rgba(156,175,136,0.3)] mb-2 disabled:opacity-60">{shareBusy ? 'Preparing…' : 'Share this Girl →'}</button>
               <button onClick={() => setSelectedGirl(null)} className="w-full bg-[#4A2C35] text-white py-3 rounded-full font-bold active:scale-95 shadow-[0_8px_20px_-4px_rgba(74,44,53,0.2)]">Got it, Ovi</button>
             </div>

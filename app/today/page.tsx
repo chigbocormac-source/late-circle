@@ -417,16 +417,26 @@ function HomeContent() {
     logEvent('claim_started', { lateDays });
   };
 
+  // --- FIXED: use YYYY-MM-DD + don't double-push history ---
   const handlePeriodCame = () => {
     setShowPeriodCame(true);
-    setShowClaimFlow(false); // Close the claim flow modal
-    localStorage.setItem('lateCircleLastPeriod', new Date().toISOString());
-    
-    const newHistory = [...JSON.parse(localStorage.getItem('lateCircleHistory') || '[]'), lastPeriodDate];
+    setShowClaimFlow(false);
+    const todayKey = localDateKey();
+    const prevHistory = JSON.parse(localStorage.getItem('lateCircleHistory') || '[]');
+    const newHistory = lastPeriodDate && !prevHistory.includes(lastPeriodDate)
+      ? [...prevHistory, lastPeriodDate]
+      : prevHistory;
     localStorage.setItem('lateCircleHistory', JSON.stringify(newHistory));
+    localStorage.setItem('lateCircleLastPeriod', todayKey);
+    setLastPeriodDate(todayKey);
     localStorage.removeItem('lateCircleLastClaimDate');
-    
     logEvent('period_came', { claimed: hasClaimedToday });
+  };
+
+  // --- FIXED: Ask Ovi now carries her Girl + Day ---
+  const handleAskOvi = () => {
+    const q = `Why do I feel like this? Explain my body. I am on Day ${cycleData.currentDay}, ${girl.name} Girl, my average is ${cycleData.average} days.`;
+    router.push(`/chat?ask=${encodeURIComponent(q)}`);
   };
 
   const isWalkDone = circles.walk;
@@ -487,7 +497,6 @@ function HomeContent() {
     const food = customFood.toLowerCase().trim();
     if (!food) return;
     
-    // Keyword scanning logic
     const hasCarbs = ['rice', 'eba', 'garri', 'yam', 'bread', 'indomie', 'plantain', 'semo', 'fufu', 'spaghetti', 'noodles'].some(carb => food.includes(carb));
     const hasProtein = ['egg', 'chicken', 'fish', 'beans', 'meat', 'ugu', 'egusi', 'okra', 'vegetable', 'moi moi', 'turkey', 'beef'].some(prot => food.includes(prot));
     
@@ -718,7 +727,6 @@ function HomeContent() {
               {gist.title}
             </p>
             
-            {/* Clean Message Block (No boxes) */}
             <p className="text-[13px] text-[#4A2C35]/70 leading-relaxed mb-4">
               {gist.message}
             </p>
@@ -765,7 +773,6 @@ function HomeContent() {
             ) : (
               <>
                 {nextPhase && nextPhase.days === 1 ? (
-                  // LAST DAY: Meet the new Girl
                   <>
                     <p className="text-sm text-[#4A2C35] font-bold mb-2 leading-snug">
                       {nextPhase.name === 'Rest Girl' 
@@ -790,17 +797,14 @@ function HomeContent() {
                     </div>
                   </>
                 ) : (
-                  // MIDDLE OF PHASE: Use the Daily Teaser from our new file
                   <>
                     <p className="text-sm text-[#4A2C35] font-bold mb-2 leading-snug">
                       Tomorrow you are still {dailyCheck.girlName}.
                     </p>
                     <p className="text-xs text-[#4A2C35]/70 leading-relaxed mb-4">
                       {(() => {
-                        // Calculate her day in phase (0-indexed) to pick the right teaser
                         const dayIndex = Math.max(0, cycleData.currentDay - 1);
                         const girlTeasers = DAILY_TEASERS[dailyCheck.girlName] || [];
-                        // Pull the teaser, or the last one if she is on a really long phase
                         return girlTeasers[Math.min(dayIndex, girlTeasers.length - 1)] || "I have a new thought for you.";
                       })()}
                     </p>
@@ -881,7 +885,7 @@ function HomeContent() {
 
       {/* --- MODALS --- */}
 
-      {/* CLAIM FLOW MODAL - THE MISSING PIECE */}
+      {/* CLAIM FLOW MODAL */}
       {showClaimFlow && (
         <div className="fixed inset-0 bg-[#4A2C35]/20 backdrop-blur-sm z-200 flex items-center justify-center p-6 animate-fade-in">
           <div className="w-full max-w-sm bg-white rounded-3xl p-6 shadow-[0_24px_48px_-16px_rgba(74,44,53,0.25)] text-center animate-slide-up border border-[#4A2C35]/5 relative overflow-hidden">
@@ -927,9 +931,9 @@ function HomeContent() {
             <h3 className="text-xl font-bold text-white mb-2">How is your body now?</h3>
             <p className="text-sm text-white/60 mb-6">Just a quick check before you sleep.</p>
             <div className="flex flex-col gap-2 w-full">
-              <button onClick={() => { localStorage.setItem('lateCircleNightCheckDone', localDateKey()); setShowNightCheck(false); }} className="w-full bg-[#9CAF88] text-white py-3.5 rounded-xl font-bold active:scale-95 shadow-md text-sm">Better 🌱</button>
-              <button onClick={() => { localStorage.setItem('lateCircleNightCheckDone', localDateKey()); setShowNightCheck(false); }} className="w-full bg-white/10 text-white py-3.5 rounded-xl font-bold active:scale-95 shadow-md text-sm">Same 🌙</button>
-              <button onClick={() => { localStorage.setItem('lateCircleNightCheckDone', localDateKey()); setShowNightCheck(false); }} className="w-full bg-[#FF8FA3] text-white py-3.5 rounded-xl font-bold active:scale-95 shadow-md text-sm">Worse 🤍</button>
+              <button onClick={() => { localStorage.setItem('lateCircleNightCheckDone', localDateKey()); setShowNightCheck(false); setShowGoodnight(true); }} className="w-full bg-[#9CAF88] text-white py-3.5 rounded-xl font-bold active:scale-95 shadow-md text-sm">Better 🌱</button>
+              <button onClick={() => { localStorage.setItem('lateCircleNightCheckDone', localDateKey()); setShowNightCheck(false); setShowGoodnight(true); }} className="w-full bg-white/10 text-white py-3.5 rounded-xl font-bold active:scale-95 shadow-md text-sm">Same 🌙</button>
+              <button onClick={() => { localStorage.setItem('lateCircleNightCheckDone', localDateKey()); setShowNightCheck(false); setShowGoodnight(true); }} className="w-full bg-[#FF8FA3] text-white py-3.5 rounded-xl font-bold active:scale-95 shadow-md text-sm">Worse 🤍</button>
             </div>
           </div>
         </div>
@@ -1025,6 +1029,23 @@ function HomeContent() {
                     Not right now
                   </button>
                 </div>
+              </div>
+            )}
+
+            {/* FIXED: refused now has UI — no more blank modal */}
+            {checkStep === 'refused' && (
+              <div className="flex flex-col items-center">
+                <div className="w-12 h-12 rounded-full bg-[#FFF0F3] flex items-center justify-center mb-4 text-2xl">🤍</div>
+                <h3 className="text-lg font-bold text-[#4A2C35] mb-2">No wahala, love.</h3>
+                <p className="text-sm text-[#4A2C35]/70 mb-6 leading-relaxed px-2">
+                  No pressure. You are still here, and that counts. I will be here tomorrow.
+                </p>
+                <button 
+                  onClick={() => setShowCheckModal(false)}
+                  className="w-full bg-[#4A2C35] text-white py-3.5 rounded-xl font-bold active:scale-95 shadow-md"
+                >
+                  Okay, Ovi
+                </button>
               </div>
             )}
 
@@ -1247,6 +1268,7 @@ function HomeContent() {
         </div>
       )}
 
+      {/* FIXED: Goodnight now celebrates One Check, not 4 circles — V4.2 */}
       {showGoodnight && (
         <div className="absolute inset-0 bg-[#F1EBFF] z-50 flex flex-col items-center pt-12 px-6 pb-28">
           <div className="flex items-center gap-3 mb-2 text-[#9CAF88]">
@@ -1260,11 +1282,9 @@ function HomeContent() {
               </p>
             ) : (
               <>
-                {closedCount === 0 && "You opened the app. That's the first win. Tomorrow we try one circle."}
-                {closedCount === 1 && "You showed up today. 1 win is still a win 💚"}
-                {closedCount === 2 && "2 wins today — that's a real win, fine girl! You showed up 💚"}
-                {closedCount === 3 && "3 wins — close to a full circle today ✨"}
-                {closedCount === 4 && "All 4 today. That's a full circle, babe. Let's do it again tomorrow ✨"}
+                {isDone
+                  ? "You did your One Check today. That is enough. You showed up 💚"
+                  : "You opened the app. That's the first win. Tomorrow we try one circle."}
               </>
             )}
           </div>
@@ -1295,7 +1315,7 @@ function HomeContent() {
           <div className="w-full max-w-sm flex flex-col items-center mt-12">
             <h2 className="text-3xl font-bold text-[#4A2C35] mb-2 text-center w-full">You showed up today 💚</h2>
             <p className="text-[#4A2C35]/60 text-sm mb-8 text-center px-4">
-              {closedCount === 4 ? "Rest well tonight, babe." : !circles.sleep ? "Tomorrow's little goal: In bed by 10:30pm, no scrolling ✨" : !circles.food ? "Tomorrow's little goal: Eat a lovely balanced plate before 9pm 🍲" : !isWalkDone ? "Tomorrow's little goal: 20 mins of moving your body 👟" : "Tomorrow's little goal: 90 seconds of calm just for you 🧠"}
+              {isDone ? "Rest well tonight, babe." : !circles.sleep ? "Tomorrow's little goal: In bed by 10:30pm, no scrolling ✨" : !circles.food ? "Tomorrow's little goal: Eat a lovely balanced plate before 9pm 🍲" : !isWalkDone ? "Tomorrow's little goal: 20 mins of moving your body 👟" : "Tomorrow's little goal: 90 seconds of calm just for you 🧠"}
             </p>
             <div className="mt-auto w-full">
               <button onClick={() => { setIsNightClosed(true); localStorage.setItem('lateCircleNightClosed', 'true'); setShowGoodnight(false); }} className="w-full bg-[#4A2C35] text-white py-4 rounded-full text-lg font-bold active:scale-95 shadow-[0_4px_20px_rgba(74,44,53,0.15)]">See you tomorrow</button>
@@ -1398,9 +1418,9 @@ function HomeContent() {
         </div>
       )}
 
-      {/* FLOATING OVI CHAT BUTTON - NOW SAYS "ASK OVI" */}
+      {/* FLOATING OVI CHAT BUTTON — FIXED: carries her Girl */}
       <button 
-        onClick={() => router.push('/chat')}
+        onClick={handleAskOvi}
         className="fixed bottom-28 right-6 z-50 flex items-center gap-2 px-5 h-14 rounded-full bg-linear-to-tr from-[#FF8FA3] to-[#9CAF88] shadow-[0_8px_32px_rgba(255,143,163,0.4)] animate-orb-breathe active:scale-95 transition-transform"
       >
         <span className="text-xl">💬</span>

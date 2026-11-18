@@ -1,74 +1,59 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
 export default function Onboarding() {
   const router = useRouter();
   const [step, setStep] = useState(0);
-  
+
+  const [herName, setHerName] = useState('');
   const [lastPeriodDate, setLastPeriodDate] = useState('');
   const [prevPeriodDate, setPrevPeriodDate] = useState('');
   const [periodDuration, setPeriodDuration] = useState('');
   const [cycleType, setCycleType] = useState('');
 
-  const calculatePrediction = () => {
-    let averageCycle = 35; 
-    let cycleText = "35 days girl";
-    let realDiffDays = 0;
-    let estimated = true;
+  const [todayStr, setTodayStr] = useState('');
+
+  useEffect(() => {
+  setTodayStr(new Date().toISOString().split('T')[0]);
+}, []);
+  const datesValid = !!lastPeriodDate && lastPeriodDate <= todayStr && (!prevPeriodDate || prevPeriodDate < lastPeriodDate) && !!cycleType;
+
+  const getStory = () => {
+    let average = 35;
+    let isReal = false;
+    let realDiff = 0;
 
     if (lastPeriodDate && prevPeriodDate) {
-      const [ly, lm, ld] = lastPeriodDate.split('-').map(Number);
-      const [py, pm, pd] = prevPeriodDate.split('-').map(Number);
-      const last = new Date(Date.UTC(ly, lm - 1, ld));
-      const prev = new Date(Date.UTC(py, pm - 1, pd));
-      const diffTime = Math.abs(last.getTime() - prev.getTime());
-      realDiffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
-      
-      if (realDiffDays >= 25 && realDiffDays <= 45) {
-        averageCycle = realDiffDays;
-        cycleText = `${realDiffDays} days girl`;
-        estimated = false;
-      } else {
-        cycleText = "35 days girl (using average)";
+      const last = new Date(lastPeriodDate + 'T00:00:00');
+      const prev = new Date(prevPeriodDate + 'T00:00:00');
+      realDiff = Math.round((last.getTime() - prev.getTime()) / 86400000);
+      if (realDiff >= 21 && realDiff <= 60) {
+        average = realDiff;
+        isReal = true;
       }
-    } else if (cycleType === 'Monthly') {
-      averageCycle = 28;
-      cycleText = "28 days girl (estimate)";
-    } else if (cycleType === 'Often Late') {
-      averageCycle = 38;
-      cycleText = "38 days girl (estimate)";
-    } else if (cycleType === 'Very Irregular') {
-      averageCycle = 45;
-      cycleText = "45 days girl (estimate)";
-    }
+    } else if (cycleType === 'Monthly') average = 28;
+    else if (cycleType === 'Often Late') average = 38;
+    else if (cycleType === 'Very Irregular') average = 45;
 
-    const last = lastPeriodDate ? new Date(lastPeriodDate) : new Date();
-    const nextStart = new Date(last);
-    nextStart.setDate(last.getDate() + averageCycle - 2);
-    const nextEnd = new Date(last);
-    nextEnd.setDate(last.getDate() + averageCycle + 2);
+    const last = lastPeriodDate ? new Date(lastPeriodDate + 'T00:00:00') : new Date();
+    const start = new Date(last);
+    start.setDate(last.getDate() + average - 3);
+    const end = new Date(last);
+    end.setDate(last.getDate() + average + 3);
+    const fmt = (d: Date) => d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
 
-    const formatDate = (date: Date) => date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
-
-    return {
-      cycleText,
-      nextRange: `${formatDate(nextStart)} - ${formatDate(nextEnd)}`,
-      averageCycle,
-      realDiffDays,
-      isIrregular: realDiffDays > 35,
-      estimated,
-    };
+    return { average, isReal, realDiff, window: `${fmt(start)} - ${fmt(end)}` };
   };
 
   const handleFinish = () => {
     localStorage.setItem('lateCircleOnboarded', 'true');
+    localStorage.setItem('lateCircleName', herName.trim());
     localStorage.setItem('lateCircleLastPeriod', lastPeriodDate);
     localStorage.setItem('lateCirclePrevPeriod', prevPeriodDate);
     localStorage.setItem('lateCircleDuration', periodDuration);
     localStorage.setItem('lateCircleType', cycleType);
-    
     localStorage.setItem('lateCirclePromised7Days', 'true');
     localStorage.setItem('lateCircleCommitDate', new Date().toISOString());
 
@@ -88,69 +73,86 @@ export default function Onboarding() {
     router.push('/today');
   };
 
+  const name = herName.trim();
+
   return (
     <main className="min-h-screen bg-[#FFF0F3] text-[#4A2C35] flex flex-col items-center pt-12 px-6 font-sans pb-8">
-      
-      {/* PROGRESS BAR (7 steps) */}
+
       <div className="w-full max-w-sm flex gap-1.5 mb-8">
-        {[0, 1, 2, 3, 4, 5, 6].map(s => (
-          <div key={s} className={`h-1.5 flex-1 rounded-full transition-all duration-500 ${step >= s ? 'bg-[#4A2C35] shadow-[0_2px_8px_rgba(74,44,53,0.2)]' : 'bg-[#4A2C35]/10'}`}></div>
+        {[0, 1, 2, 3, 4, 5].map(s => (
+          <div key={s} className={`h-1.5 flex-1 rounded-full transition-all duration-500 ${step >= s ? 'bg-[#4A2C35]' : 'bg-[#4A2C35]/10'}`} />
         ))}
       </div>
 
-      {/* SCREEN 0: HER FEAR */}
+      {/* 1 - WELCOME TO LATE CIRCLE - FIXED */}
       {step === 0 && (
         <div className="flex flex-col items-center text-center flex-1 w-full max-w-sm animate-slide-up">
-          <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center mb-8 mt-8 shadow-[0_20px_40px_-12px_rgba(74,44,53,0.12)] border border-white">
-            <span className="text-3xl">🌙</span>
-          </div>
-          <h1 className="text-[28px] font-bold leading-[1.15] mb-4 px-2">
-            Ovi Knows What You Are Thinking
+          <p className="text-[13px] font-bold tracking-[0.2em] uppercase text-[#4A2C35] mb-1">Late Circle</p>
+          <p className="text-[13px] text-[#4A2C35]/60 mb-6">A little space to understand your body 💚</p>
+
+          <h1 className="text-[28px] font-bold leading-[1.15] mb-5 px-2">
+            Is your period taking longer than expected?
           </h1>
-          <p className="text-[#4A2C35]/70 text-[15px] leading-relaxed px-2 mb-10">
-            "Am I pregnant?"<br/>
-            "Am I broken?"<br/>
-            "Why is mine late and everyone else is seeing theirs?"<br/><br/>
-            You are not broken. You are not alone.<br/>
-            Your period is late because your body is stressed.<br/>
-            Not because you did something bad.
+
+          <div className="w-full mb-5">
+            <p className="text-[15px] text-[#4A2C35]/70 leading-relaxed">“Why is my period late?”</p>
+            <p className="text-[15px] text-[#4A2C35]/70 leading-relaxed">“When will it come?”</p>
+            <p className="text-[15px] text-[#4A2C35]/70 leading-relaxed">“Is everything okay?”</p>
+          </div>
+
+          <h2 className="text-[18px] font-bold leading-tight mb-2 px-2">You don&apos;t have to figure it all out alone.</h2>
+          <p className="text-[14px] text-[#4A2C35]/60 leading-relaxed px-2 mb-6">
+            Late Circle helps you understand your cycle and build small everyday habits that support your wellbeing.
           </p>
+
+          <div className="w-full bg-white rounded-2xl p-4 flex gap-3 items-start text-left mb-5 shadow-sm">
+            <div className="w-11 h-11 shrink-0 rounded-full bg-linear-to-tr from-[#FF8FA3] to-[#9CAF88] flex items-center justify-center text-white font-bold text-lg">O</div>
+            <div>
+              <p className="text-[14px] font-bold mb-1">Meet Ovi</p>
+              <p className="text-[13px] text-[#4A2C35]/70 leading-relaxed">I&apos;m Ovi. You can talk to me about your period, your worries and the things you don&apos;t understand. No shouting. No judgement.</p>
+            </div>
+          </div>
+
+          <div className="w-full text-left mb-2">
+            <label className="text-[13px] font-bold text-[#4A2C35] mb-2 block">What should Ovi call you?</label>
+            <input
+              value={herName}
+              onChange={(e) => setHerName(e.target.value)}
+              placeholder="Your name"
+              maxLength={20}
+              className="w-full bg-white p-4 rounded-2xl text-[15px] font-medium placeholder:text-[#4A2C35]/35 focus:outline-none focus:border-[#4A2C35]/20 shadow-sm"
+            />
+            <p className="text-[11px] text-[#4A2C35]/50 mt-2 text-center">🔒 Your information is handled according to our privacy policy.</p>
+          </div>
+
           <button onClick={() => setStep(1)} className="w-full bg-[#4A2C35] text-white py-4 rounded-full text-[16px] font-bold mt-auto active:scale-[0.98] shadow-lg">
-            Yes, That Is Me →
+            Yes, That&apos;s Me →
           </button>
-          <p className="text-[10px] text-[#4A2C35]/40 text-center mt-6 tracking-wide max-w-75 leading-relaxed">
-            Not a medical diagnosis. Lifestyle tracking only.
+          <p className="text-[10px] text-[#4A2C35]/40 text-center mt-4 leading-relaxed px-4">
+            Late Circle is a daily wellbeing companion, not a medical diagnosis or treatment.
           </p>
         </div>
       )}
 
-      {/* SCREEN 1: DATES */}
+      {/* 2 - LET'S KNOW YOUR PATTERN */}
       {step === 1 && (
         <div className="flex flex-col flex-1 w-full max-w-sm animate-slide-up overflow-y-auto pb-4">
-          <h1 className="text-[26px] font-bold leading-tight mb-2 text-center">Let's know your pattern.</h1>
+          <h1 className="text-[26px] font-bold leading-tight mb-2 text-center">Let&apos;s know your pattern{name ? `, ${name}` : ''}.</h1>
           <p className="text-[#4A2C35]/50 text-xs mb-6 text-center">This stays on your phone only. 🔒</p>
-          
+
           <div className="flex flex-col gap-6 w-full mb-8">
             <div>
               <label className="text-[11px] font-bold text-[#4A2C35]/40 uppercase tracking-widest mb-2 block">When did your last period start?</label>
-              <input type="date" value={lastPeriodDate} onChange={(e) => setLastPeriodDate(e.target.value)} className="w-full bg-white border border-transparent text-[#4A2C35] p-4 rounded-2xl focus:outline-none focus:border-[#4A2C35]/20 text-center text-[16px] shadow-sm" />
-              <p className="text-[10px] text-[#4A2C35]/40 mt-1.5 text-center">Don't remember exact? Pick closest week.</p>
+              <input type="date" max={todayStr} value={lastPeriodDate} onChange={(e) => setLastPeriodDate(e.target.value)} className="w-full bg-white p-4 rounded-2xl text-center text-[16px] shadow-sm focus:outline-none" />
+              <p className="text-[10px] text-[#4A2C35]/40 mt-1.5 text-center">Don&apos;t remember exact? Pick closest week.</p>
             </div>
 
             <div>
               <label className="text-[11px] font-bold text-[#4A2C35]/40 uppercase tracking-widest mb-2 block">And the one before that? (Optional)</label>
-              <input type="date" value={prevPeriodDate} onChange={(e) => setPrevPeriodDate(e.target.value)} className="w-full bg-white border border-transparent text-[#4A2C35] p-4 rounded-2xl focus:outline-none focus:border-[#4A2C35]/20 text-center text-[16px] shadow-sm" />
-            </div>
-
-            <div>
-              <label className="text-[11px] font-bold text-[#4A2C35]/40 uppercase tracking-widest mb-2 block">How many days does it last?</label>
-              <div className="flex gap-2">
-                {['3 days', '4 days', '5 days', '6+ days'].map(d => (
-                  <button key={d} onClick={() => setPeriodDuration(d)} className={`flex-1 py-3.5 rounded-2xl border text-[13px] font-bold transition-all ${periodDuration === d ? 'border-[#4A2C35] bg-white text-[#4A2C35] scale-[1.02] shadow-sm' : 'border-white bg-white/70 text-[#4A2C35]/50'}`}>
-                    {d}
-                  </button>
-                ))}
-              </div>
+              <input type="date" max={todayStr} value={prevPeriodDate} onChange={(e) => setPrevPeriodDate(e.target.value)} className="w-full bg-white p-4 rounded-2xl text-center text-[16px] shadow-sm focus:outline-none" />
+              {prevPeriodDate && lastPeriodDate && prevPeriodDate >= lastPeriodDate && (
+                <p className="text-[11px] text-[#8A2C3E] mt-1.5 text-center font-bold">The one before should be earlier than the last one.</p>
+              )}
             </div>
 
             <div>
@@ -171,119 +173,131 @@ export default function Onboarding() {
                 ))}
               </div>
             </div>
+
+            <div>
+              <label className="text-[11px] font-bold text-[#4A2C35]/40 uppercase tracking-widest mb-2 block">How many days does it last? (Optional)</label>
+              <div className="flex gap-2">
+                {['3 days', '4 days', '5 days', '6+ days'].map(d => (
+                  <button key={d} onClick={() => setPeriodDuration(d)} className={`flex-1 py-3.5 rounded-2xl border text-[13px] font-bold transition-all ${periodDuration === d ? 'border-[#4A2C35] bg-white text-[#4A2C35] shadow-sm' : 'border-white bg-white/70 text-[#4A2C35]/50'}`}>
+                    {d}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
 
           <div className="flex gap-3 w-full mt-auto">
             <button onClick={() => setStep(0)} className="flex-1 border border-white bg-white/80 py-4 rounded-full font-bold text-[#4A2C35]/60 active:scale-[0.98]">Back</button>
-            <button onClick={() => setStep(2)} disabled={!lastPeriodDate || !periodDuration || !cycleType} className={`flex-2 py-4 rounded-full font-bold transition-all ${lastPeriodDate && periodDuration && cycleType ? 'bg-[#4A2C35] text-white shadow-lg active:scale-[0.98]' : 'bg-[#4A2C35]/15 text-[#4A2C35]/30'}`}>
-              Know my pattern →
+            <button onClick={() => setStep(2)} disabled={!datesValid} className={`flex-2 py-4 rounded-full font-bold transition-all ${datesValid ? 'bg-[#4A2C35] text-white shadow-lg active:scale-[0.98]' : 'bg-[#4A2C35]/15 text-[#4A2C35]/30'}`}>
+              See my story →
             </button>
           </div>
         </div>
       )}
 
-      {/* SCREEN 2: PREDICTION */}
+      {/* 3 - YOUR CYCLE STORY */}
       {step === 2 && (() => {
-        const prediction = calculatePrediction();
+        const s = getStory();
         return (
           <div className="flex flex-col items-center flex-1 w-full max-w-sm animate-slide-up overflow-y-auto pb-4">
-            <h1 className="text-[26px] font-bold leading-tight mb-2 text-center">
-              {prevPeriodDate 
-                ? `You are a ${prediction.cycleText}.`
-                : `Let's learn your pattern together.`}
-            </h1>
-            <p className="text-[#4A2C35]/60 text-center mb-6 px-4">Your body is talking. Let's listen. 💜</p>
+            <h1 className="text-[26px] font-bold leading-tight mb-2 text-center">Your cycle story{name ? `, ${name}` : ''}</h1>
+            <p className="text-[#4A2C35]/60 text-center mb-6 px-4 text-[13px]">Your body is talking. Let&apos;s listen. 💜</p>
 
-            <div className="w-full bg-white rounded-[20px] p-5 border border-white shadow-sm mb-6 mt-4">
-              <p className="text-[11px] font-bold text-[#4A2C35]/40 uppercase tracking-widest mb-3">Your last pattern</p>
-              <div className="flex justify-between items-center mb-4 pb-4 border-b border-[#4A2C35]/5">
+            <div className="w-full bg-white rounded-[20px] p-5 shadow-sm mb-4">
+              <p className="text-[11px] font-bold text-[#4A2C35]/40 uppercase tracking-widest mb-3">What you told me</p>
+              <div className="flex justify-between items-center pb-4 border-b border-[#4A2C35]/5 mb-4">
                 <div>
-                  <p className="text-[13px] text-[#4A2C35]/60">Last: {lastPeriodDate ? new Date(lastPeriodDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : '-'}</p>
-                  {prevPeriodDate && <p className="text-[13px] text-[#4A2C35]/60">Before: {new Date(prevPeriodDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</p>}
+                  <p className="text-[13px] text-[#4A2C35]/60">Last: {lastPeriodDate ? new Date(lastPeriodDate + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : '-'}</p>
+                  {prevPeriodDate && <p className="text-[13px] text-[#4A2C35]/60">Before: {new Date(prevPeriodDate + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</p>}
+                  <p className="text-[13px] text-[#4A2C35]/60">Pattern: {cycleType}</p>
                 </div>
-                {prevPeriodDate && <p className="text-[13px] font-bold text-[#4A2C35] bg-[#FFF0F3] px-3 py-1 rounded-full">= {prediction.realDiffDays} days</p>}
+                {s.isReal && <p className="text-[13px] font-bold bg-[#FFF0F3] px-3 py-1 rounded-full">= {s.realDiff} days</p>}
               </div>
-              
-              <p className="text-[12px] text-[#4A2C35]/60 mb-3">
-                {prediction.realDiffDays > 35 
-                  ? "That's longer than the 21-35 day range. Let's track it." 
-                  : prediction.estimated 
-                  ? "We don't have your real numbers yet. This is a starting point." 
-                  : "That's within the normal range. Let's keep it steady."}
-              </p>
-              
-              <p className="text-[16px] font-bold text-[#4A2C35] mb-1">Next window: {prediction.nextRange}</p>
-              <p className="text-[12px] text-[#4A2C35]/50 mb-1">Keep pad handy from {prediction.nextRange.split(' - ')[0]}.</p>
+
+              {s.isReal ? (
+                <div>
+                  <p className="text-[11px] font-bold text-[#9CAF88] uppercase tracking-widest mb-1">✓ From your real history</p>
+                  <p className="text-[15px] font-bold mb-1">Your last gap was {s.realDiff} days.</p>
+                  <p className="text-[12px] text-[#4A2C35]/60 leading-relaxed">That is your real number. We will learn more as you log more periods.</p>
+                </div>
+              ) : (
+                <div>
+                  <p className="text-[11px] font-bold text-[#8A2C3E] uppercase tracking-widest mb-1">~ Estimate for now</p>
+                  <p className="text-[15px] font-bold mb-1">We are starting with ~{s.average} days.</p>
+                  <p className="text-[12px] text-[#4A2C35]/60 leading-relaxed">We don&apos;t have your real numbers yet. This is a starting point, not a promise. After 2-3 real cycles, Ovi will learn YOUR pattern.</p>
+                </div>
+              )}
             </div>
 
-            {/* HONEST TRUTH MERGED HERE */}
-            <div className="bg-[#FFF0F3] p-4 rounded-xl mb-4 text-[12px] text-[#4A2C35]/70 leading-relaxed text-center">
+            <div className="w-full bg-[#FFF0F3] rounded-[20px] p-5 mb-4 text-center">
+              <p className="text-[11px] font-bold text-[#4A2C35]/40 uppercase tracking-widest mb-1">Possible next window</p>
+              <p className="text-[18px] font-bold mb-1">{s.window}</p>
+              <p className="text-[11px] text-[#4A2C35]/60 leading-relaxed">This is a guide, not a promise. Your body may come earlier or later. That is normal.</p>
+            </div>
+
+            <div className="bg-white p-4 rounded-xl mb-4 text-[12px] text-[#4A2C35]/70 leading-relaxed text-center w-full">
               A normal cycle is 21 to 35 days. If yours is often 40, 45, or 50 days, it just means your body is working a little harder. It is not a curse, and it is not your fault.
             </div>
 
             <button onClick={() => setStep(3)} className="w-full bg-[#4A2C35] text-white py-4 rounded-full font-bold shadow-lg mt-auto active:scale-[0.98]">
-              Keep going →
+              Meet Ovi →
             </button>
           </div>
         );
       })()}
 
-      {/* SCREEN 3: WHY DAILY? */}
+      {/* 4 - MEET OVI */}
       {step === 3 && (
         <div className="flex flex-col items-center text-center flex-1 w-full max-w-sm animate-slide-up justify-center">
-          <h1 className="text-[26px] font-bold leading-tight mb-4">Why 4 Circles? Why Every Day?</h1>
-          
+          <div className="w-16 h-16 rounded-full bg-linear-to-tr from-[#FF8FA3] to-[#9CAF88] animate-orb-breathe mb-6 flex items-center justify-center text-white text-2xl font-bold">O</div>
+          <h1 className="text-[26px] font-bold leading-tight mb-4">Meet Ovi{name ? `, ${name}` : ''}</h1>
           <p className="text-[14px] text-[#4A2C35]/70 leading-relaxed mb-4 px-2">
-            Your period is late because your body is stressed.<br/>
-            Not because you are broken.<br/>
-            Your body thinks it is not safe to let go.
+            Ovi is here to help you understand your body — in simple words, not big medical words.
           </p>
-          <p className="text-[14px] text-[#4A2C35] font-bold leading-relaxed mb-6 px-2">
-            The 4 circles tell your body: It is safe now.
-          </p>
-          <p className="text-[14px] text-[#4A2C35]/70 leading-relaxed mb-6 px-2">
-            But your body does not believe it after 1 day.<br/>
-            It needs to hear it <span className="font-bold text-[#4A2C35]">every day</span>.<br/>
-            Your hormones need many days of the same safe message to start working again.
-          </p>
-          
+          <div className="w-full flex flex-col gap-3 mb-6 text-left">
+            <div className="bg-white p-4 rounded-2xl shadow-sm"><p className="text-[14px] font-bold mb-1">💬 Ask her anything</p><p className="text-[12px] text-[#4A2C35]/60">“Why is my stomach paining me?” “Am I pregnant?” “Is discharge normal?” She will answer gently.</p></div>
+            <div className="bg-white p-4 rounded-2xl shadow-sm"><p className="text-[14px] font-bold mb-1">🌙 She checks in on you</p><p className="text-[12px] text-[#4A2C35]/60">One small check a day. Not to judge you. To hold you.</p></div>
+            <div className="bg-white p-4 rounded-2xl shadow-sm"><p className="text-[14px] font-bold mb-1">🩺 If you ever need a doctor</p><p className="text-[12px] text-[#4A2C35]/60">She will make your Doctor Report, tell you what to say, and translate what he says after. You will never walk in alone.</p></div>
+          </div>
+          <p className="text-[11px] text-[#4A2C35]/50 leading-relaxed mb-6 px-2">Ovi is not a doctor. She does not diagnose you. She helps you understand, and helps you talk to a doctor when you are ready.</p>
           <button onClick={() => setStep(4)} className="w-full bg-[#4A2C35] text-white py-4 rounded-full font-bold shadow-lg mt-auto active:scale-[0.98]">
-            How do I tell it I am safe?
+            How does it work? →
           </button>
         </div>
       )}
 
-      {/* SCREEN 4: THE 4 CIRCLES */}
+      {/* 5 - HOW LATE CIRCLE WORKS */}
       {step === 4 && (
         <div className="flex flex-col items-center text-center flex-1 w-full max-w-sm animate-slide-up overflow-y-auto pb-4">
-          <h1 className="text-[26px] font-bold leading-tight mb-6">The 4 Circles</h1>
-          
+          <h1 className="text-[26px] font-bold leading-tight mb-2">How Late Circle works</h1>
+          <p className="text-[13px] text-[#4A2C35]/60 mb-6 px-4">Small care, every day. Not perfect. Just gentle.</p>
+
           <div className="w-full flex flex-col gap-3 mb-6 text-left">
             <div className="bg-white p-4 rounded-2xl shadow-sm">
               <div className="flex items-center gap-3 mb-1"><span className="text-xl">🍲</span><p className="text-[14px] font-bold">Food</p></div>
-              <p className="text-[12px] text-[#4A2C35]/60 pl-8">One balanced plate tells your body it is safe. Carbs + protein + veggies. Last meal before 9pm.</p>
+              <p className="text-[12px] text-[#4A2C35]/60 pl-8">One balanced plate. Carbs + protein + veggies. Last meal before 9pm.</p>
             </div>
             <div className="bg-white p-4 rounded-2xl shadow-sm">
               <div className="flex items-center gap-3 mb-1"><span className="text-xl">👟</span><p className="text-[14px] font-bold">Walk</p></div>
-              <p className="text-[12px] text-[#4A2C35]/60 pl-8">Don't sit all day. Move to move blood. 20 minutes total. Slow still counts.</p>
+              <p className="text-[12px] text-[#4A2C35]/60 pl-8">Don&apos;t sit all day. 20 minutes total. Slow still counts.</p>
             </div>
             <div className="bg-white p-4 rounded-2xl shadow-sm">
               <div className="flex items-center gap-3 mb-1"><span className="text-xl">🌙</span><p className="text-[14px] font-bold">Sleep</p></div>
-              <p className="text-[12px] text-[#4A2C35]/60 pl-8">Sleep is when your body makes period hormones. Same time every night. Dark room. Phone away 30 mins before.</p>
+              <p className="text-[12px] text-[#4A2C35]/60 pl-8">Sleep is when your body makes period hormones. Same time every night. Phone away 30 mins before.</p>
             </div>
             <div className="bg-white p-4 rounded-2xl shadow-sm">
               <div className="flex items-center gap-3 mb-1"><span className="text-xl">🧠</span><p className="text-[14px] font-bold">Calm</p></div>
-              <p className="text-[12px] text-[#4A2C35]/60 pl-8">Stress blocks your period. Stop overthinking. Write it or breathe it. 90 seconds is enough to lower stress.</p>
+              <p className="text-[12px] text-[#4A2C35]/60 pl-8">Stress makes your body hold on. Write it or breathe it. 90 seconds is enough.</p>
             </div>
           </div>
 
           <div className="bg-[#4A2C35]/5 rounded-2xl p-4 mb-4 w-full text-center">
-            <p className="text-[13px] font-bold text-[#4A2C35]">You don't need 4 circles to be perfect. Close 2 to win today.</p>
-            <p className="text-[11px] text-[#4A2C35]/60 mt-1">But close 2 every day. Your body learns from what you do every day, not what you do once.</p>
+            <p className="text-[13px] font-bold text-[#4A2C35]">You don&apos;t need 4 to win. Close 2 to win today.</p>
+            <p className="text-[11px] text-[#4A2C35]/60 mt-1">Your body learns from what you do every day, not what you do once.</p>
           </div>
-          
+
           <div className="w-full text-center mb-6">
-             <p className="text-[11px] text-[#4A2C35]/50 leading-relaxed">Late Circle is not a doctor. But it gives you a clear record to show your doctor when you are ready.</p>
+            <p className="text-[11px] text-[#4A2C35]/50 leading-relaxed">These are gentle habits to care for your body. They do not promise your period will return on a certain day — they help you take care of yourself while you wait.</p>
           </div>
 
           <button onClick={() => setStep(5)} className="w-full bg-[#4A2C35] text-white py-4 rounded-full font-bold shadow-lg mt-auto active:scale-[0.98]">
@@ -292,64 +306,27 @@ export default function Onboarding() {
         </div>
       )}
 
-      {/* SCREEN 5: 5 GIRLS */}
+      {/* 6 - YOUR FIRST DAY */}
       {step === 5 && (
-        <div className="flex flex-col flex-1 w-full max-w-sm animate-slide-up overflow-y-auto pb-4">
-          <h1 className="text-[26px] font-bold leading-tight mb-2 text-center">5 Girls in 1 Body</h1>
-          <p className="text-[13px] text-[#4A2C35]/60 text-center mb-6 px-4">
-            Your body is not one mood. They run on percentages, so every cycle length is seen correctly.
-          </p>
-
-          <div className="flex flex-col gap-2 w-full mb-8">
-            <div className="bg-white p-3.5 rounded-xl border border-[#4A2C35]/5 flex justify-between items-center">
-              <span className="text-[13px] font-bold">🌙 Rest Girl</span>
-              <span className="text-[11px] text-[#4A2C35]/50">First 15% • bleeding, rest</span>
-            </div>
-            <div className="bg-white p-3.5 rounded-xl border border-[#4A2C35]/5 flex justify-between items-center">
-              <span className="text-[13px] font-bold">🌱 Fresh Girl</span>
-              <span className="text-[11px] text-[#4A2C35]/50">15% – 35% • light, active</span>
-            </div>
-            <div className="bg-white p-3.5 rounded-xl border border-[#4A2C35]/5 flex justify-between items-center">
-              <span className="text-[13px] font-bold">✨ Fine Girl</span>
-              <span className="text-[11px] text-[#4A2C35]/50">35% – 60% • confident, glowing</span>
-            </div>
-            <div className="bg-white p-3.5 rounded-xl border border-[#4A2C35]/5 flex justify-between items-center">
-              <span className="text-[13px] font-bold">🍚 Chop Girl</span>
-              <span className="text-[11px] text-[#4A2C35]/50">60% – 80% • hungry, cravings</span>
-            </div>
-            <div className="bg-white p-3.5 rounded-xl border border-[#4A2C35]/5 flex justify-between items-center">
-              <span className="text-[13px] font-bold">💜 Ready Girl</span>
-              <span className="text-[11px] text-[#4A2C35]/50">Last 20% • waiting, preparing</span>
-            </div>
-          </div>
-
-          <button onClick={() => setStep(6)} className="w-full bg-[#4A2C35] text-white py-4 rounded-full font-bold shadow-lg mt-auto active:scale-[0.98]">
-            I understand →
-          </button>
-        </div>
-      )}
-
-      {/* SCREEN 6: THE PROMISE (FINAL) */}
-      {step === 6 && (
         <div className="flex flex-col items-center text-center flex-1 w-full max-w-sm animate-slide-up overflow-y-auto pb-4 justify-center">
           <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mb-6 shadow-sm border border-white">
             <span className="text-2xl">🌙</span>
           </div>
-          
-          <h1 className="text-[24px] font-bold leading-tight mb-2">Your first 7 days</h1>
+          <h1 className="text-[24px] font-bold leading-tight mb-2">Your first day{name ? `, ${name}` : ''}</h1>
           <p className="text-[13px] text-[#4A2C35]/60 mb-8 px-4 leading-relaxed">
-            You will miss a day. Everyone misses a day.<br/>
-            Ovi will not shout at you.<br/>
+            You will miss a day. Everyone misses a day.<br />
+            Ovi will not shout at you.<br />
             Yesterday is gone. Today is new.
           </p>
 
-          <div className="bg-white rounded-2xl p-5 w-full text-left mb-8 shadow-sm">
-            <p className="text-[14px] text-[#4A2C35] font-bold mb-2">
-              Start Day 1 today.
-            </p>
-            <p className="text-[13px] text-[#4A2C35]/70 leading-relaxed">
-              Close 2 today. Just 2. That still tells your body you are trying. Come back tomorrow. That is what matters.
-            </p>
+          <div className="bg-white rounded-2xl p-5 w-full text-left mb-4 shadow-sm">
+            <p className="text-[14px] font-bold mb-2">Start small today.</p>
+            <p className="text-[13px] text-[#4A2C35]/70 leading-relaxed">Pick one little thing for today, girl. That's enough. Come back tomorrow. We'll take it one day at a time. 💚</p>
+          </div>
+
+          <div className="bg-[#D1DCC6] rounded-2xl p-4 w-full text-left mb-8">
+            <p className="text-[13px] font-bold mb-1">You never need to make up for yesterday.</p>
+            <p className="text-[12px] text-[#4A2C35]/70 leading-relaxed">Return whenever you want. Ovi will be here. No guilt. No catching up.</p>
           </div>
 
           <button onClick={handleFinish} className="w-full bg-[#4A2C35] text-white py-4 rounded-full text-[16px] font-bold shadow-lg active:scale-[0.98]">

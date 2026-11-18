@@ -96,11 +96,7 @@ export const CLUMSY_SHIELD: ShieldEntry[] = [
     text: "I'm real enough to stay up with you at 2am when you can't sleep. I'm your sister in this app. You can trust me.",
     chips: ["Are you AI?", "What can you help me with?", "How are you"],
   },
-  {
-    keywords: ['are you a girl', 'are you a boy', 'your gender', 'are you male', 'are you female'],
-    text: "love, I'm your big sister Ovi. I'm here for girls like you. What's your name?",
-    chips: ["Are you AI?", "How are you", "Is it safe to ask Ovi these questions?"],
-  },
+
   {
     keywords: ['are you a robot', 'are you a bot', 'are you ai', 'are you an ai', 'chatbot', 'are you a machine'],
     text: "Haha, small robot, big heart. I may be in your phone, but I listen like a real sister. What do you need?",
