@@ -16,9 +16,16 @@ export default function Onboarding() {
   const [todayStr, setTodayStr] = useState('');
 
   useEffect(() => {
-  setTodayStr(new Date().toISOString().split('T')[0]);
-}, []);
-  const datesValid = !!lastPeriodDate && lastPeriodDate <= todayStr && (!prevPeriodDate || prevPeriodDate < lastPeriodDate) && !!cycleType;
+    setTodayStr(new Date().toISOString().split('T')[0]);
+  }, []);
+
+  const isFuture = !!lastPeriodDate && !!todayStr && lastPeriodDate > todayStr;
+  const isSwapped = !!prevPeriodDate && !!lastPeriodDate && prevPeriodDate >= lastPeriodDate;
+
+  const gapDays = lastPeriodDate && prevPeriodDate ? Math.round((new Date(lastPeriodDate).getTime() - new Date(prevPeriodDate).getTime()) / 86400000) : 0;
+  const isFakeGap = !!prevPeriodDate && !!lastPeriodDate && !isSwapped && (gapDays < 15 || gapDays > 180);
+
+  const datesValid = !!lastPeriodDate && !!todayStr && lastPeriodDate <= todayStr && !isSwapped && !isFakeGap && !!cycleType;
 
   const getStory = () => {
     let average = 35;
@@ -76,7 +83,7 @@ export default function Onboarding() {
   const name = herName.trim();
 
   return (
-    <main className="min-h-screen bg-[#FFF0F3] text-[#4A2C35] flex flex-col items-center pt-12 px-6 font-sans pb-8">
+    <main className="min-h-screen bg-[#F1EBFF] text-[#4A2C35] flex flex-col items-center pt-12 px-6 font-sans pb-8">
 
       <div className="w-full max-w-sm flex gap-1.5 mb-8">
         {[0, 1, 2, 3, 4, 5].map(s => (
@@ -88,7 +95,7 @@ export default function Onboarding() {
       {step === 0 && (
         <div className="flex flex-col items-center text-center flex-1 w-full max-w-sm animate-slide-up">
           <p className="text-[13px] font-bold tracking-[0.2em] uppercase text-[#4A2C35] mb-1">Late Circle</p>
-          <p className="text-[13px] text-[#4A2C35]/60 mb-6">A little space to understand your body 💚</p>
+          <p className="text-[13px] text-[#4A2C35]/60 mb-6">A little space to understand your body 💜</p>
 
           <h1 className="text-[28px] font-bold leading-[1.15] mb-5 px-2">
             Is your period taking longer than expected?
@@ -106,7 +113,7 @@ export default function Onboarding() {
           </p>
 
           <div className="w-full bg-white rounded-2xl p-4 flex gap-3 items-start text-left mb-5 shadow-sm">
-            <div className="w-11 h-11 shrink-0 rounded-full bg-linear-to-tr from-[#FF8FA3] to-[#9CAF88] flex items-center justify-center text-white font-bold text-lg">O</div>
+            <div className="w-11 h-11 shrink-0 rounded-full bg-linear-to-tr from-[#A78BFA] to-[#9CAF88] flex items-center justify-center text-white font-bold text-lg">O</div>
             <div>
               <p className="text-[14px] font-bold mb-1">Meet Ovi</p>
               <p className="text-[13px] text-[#4A2C35]/70 leading-relaxed">I&apos;m Ovi. You can talk to me about your period, your worries and the things you don&apos;t understand. No shouting. No judgement.</p>
@@ -145,13 +152,19 @@ export default function Onboarding() {
               <label className="text-[11px] font-bold text-[#4A2C35]/40 uppercase tracking-widest mb-2 block">When did your last period start?</label>
               <input type="date" max={todayStr} value={lastPeriodDate} onChange={(e) => setLastPeriodDate(e.target.value)} className="w-full bg-white p-4 rounded-2xl text-center text-[16px] shadow-sm focus:outline-none" />
               <p className="text-[10px] text-[#4A2C35]/40 mt-1.5 text-center">Don&apos;t remember exact? Pick closest week.</p>
+              {isFuture && (
+                <p className="text-[11px] text-[#8A2C3E] mt-1.5 text-center font-bold">That date is still in the future. Pick a date that has already passed.</p>
+              )}
             </div>
 
             <div>
               <label className="text-[11px] font-bold text-[#4A2C35]/40 uppercase tracking-widest mb-2 block">And the one before that? (Optional)</label>
               <input type="date" max={todayStr} value={prevPeriodDate} onChange={(e) => setPrevPeriodDate(e.target.value)} className="w-full bg-white p-4 rounded-2xl text-center text-[16px] shadow-sm focus:outline-none" />
-              {prevPeriodDate && lastPeriodDate && prevPeriodDate >= lastPeriodDate && (
+              {isSwapped && (
                 <p className="text-[11px] text-[#8A2C3E] mt-1.5 text-center font-bold">The one before should be earlier than the last one.</p>
+              )}
+              {isFakeGap && (
+                <p className="text-[11px] text-[#8A2C3E] mt-1.5 text-center font-bold">That gap looks off, {gapDays} days. Your last two periods can&apos;t be that close or that far apart. Check the dates again.</p>
               )}
             </div>
 
@@ -211,7 +224,7 @@ export default function Onboarding() {
                   {prevPeriodDate && <p className="text-[13px] text-[#4A2C35]/60">Before: {new Date(prevPeriodDate + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</p>}
                   <p className="text-[13px] text-[#4A2C35]/60">Pattern: {cycleType}</p>
                 </div>
-                {s.isReal && <p className="text-[13px] font-bold bg-[#FFF0F3] px-3 py-1 rounded-full">= {s.realDiff} days</p>}
+                {s.isReal && <p className="text-[13px] font-bold bg-[#F1EBFF] px-3 py-1 rounded-full">= {s.realDiff} days</p>}
               </div>
 
               {s.isReal ? (
@@ -229,7 +242,7 @@ export default function Onboarding() {
               )}
             </div>
 
-            <div className="w-full bg-[#FFF0F3] rounded-[20px] p-5 mb-4 text-center">
+            <div className="w-full bg-[#F1EBFF] rounded-[20px] p-5 mb-4 text-center">
               <p className="text-[11px] font-bold text-[#4A2C35]/40 uppercase tracking-widest mb-1">Possible next window</p>
               <p className="text-[18px] font-bold mb-1">{s.window}</p>
               <p className="text-[11px] text-[#4A2C35]/60 leading-relaxed">This is a guide, not a promise. Your body may come earlier or later. That is normal.</p>
@@ -249,10 +262,10 @@ export default function Onboarding() {
       {/* 4 - MEET OVI */}
       {step === 3 && (
         <div className="flex flex-col items-center text-center flex-1 w-full max-w-sm animate-slide-up justify-center">
-          <div className="w-16 h-16 rounded-full bg-linear-to-tr from-[#FF8FA3] to-[#9CAF88] animate-orb-breathe mb-6 flex items-center justify-center text-white text-2xl font-bold">O</div>
+          <div className="w-16 h-16 rounded-full bg-linear-to-tr from-[#A78BFA] to-[#9CAF88] animate-orb-breathe mb-6 flex items-center justify-center text-white text-2xl font-bold">O</div>
           <h1 className="text-[26px] font-bold leading-tight mb-4">Meet Ovi{name ? `, ${name}` : ''}</h1>
           <p className="text-[14px] text-[#4A2C35]/70 leading-relaxed mb-4 px-2">
-            Ovi is here to help you understand your body — in simple words, not big medical words.
+            Ovi is here to help you understand your body, in simple words, not big medical words.
           </p>
           <div className="w-full flex flex-col gap-3 mb-6 text-left">
             <div className="bg-white p-4 rounded-2xl shadow-sm"><p className="text-[14px] font-bold mb-1">💬 Ask her anything</p><p className="text-[12px] text-[#4A2C35]/60">“Why is my stomach paining me?” “Am I pregnant?” “Is discharge normal?” She will answer gently.</p></div>
@@ -292,12 +305,13 @@ export default function Onboarding() {
           </div>
 
           <div className="bg-[#4A2C35]/5 rounded-2xl p-4 mb-4 w-full text-center">
-            <p className="text-[13px] font-bold text-[#4A2C35]">You don&apos;t need 4 to win. Close 2 to win today.</p>
+            <p className="text-[13px] font-bold text-[#4A2C35]">You don&apos;t need 4 to win. Close 1 to win today.</p>
+            <p className="text-[13px] text-[#4A2C35]/70 leading-relaxed mt-1">Close one. Just one. That still counts. Come back tomorrow. That is what matters.</p>
             <p className="text-[11px] text-[#4A2C35]/60 mt-1">Your body learns from what you do every day, not what you do once.</p>
           </div>
 
           <div className="w-full text-center mb-6">
-            <p className="text-[11px] text-[#4A2C35]/50 leading-relaxed">These are gentle habits to care for your body. They do not promise your period will return on a certain day — they help you take care of yourself while you wait.</p>
+            <p className="text-[11px] text-[#4A2C35]/50 leading-relaxed">These are gentle habits to care for your body. They do not promise your period will return on a certain day, they help you take care of yourself while you wait.</p>
           </div>
 
           <button onClick={() => setStep(5)} className="w-full bg-[#4A2C35] text-white py-4 rounded-full font-bold shadow-lg mt-auto active:scale-[0.98]">
@@ -321,7 +335,7 @@ export default function Onboarding() {
 
           <div className="bg-white rounded-2xl p-5 w-full text-left mb-4 shadow-sm">
             <p className="text-[14px] font-bold mb-2">Start small today.</p>
-            <p className="text-[13px] text-[#4A2C35]/70 leading-relaxed">Pick one little thing for today, girl. That's enough. Come back tomorrow. We'll take it one day at a time. 💚</p>
+            <p className="text-[13px] text-[#4A2C35]/70 leading-relaxed">Pick one little thing for today, girl. That&apos;s enough. Come back tomorrow. We&apos;ll take it one day at a time. 💜</p>
           </div>
 
           <div className="bg-[#D1DCC6] rounded-2xl p-4 w-full text-left mb-8">
