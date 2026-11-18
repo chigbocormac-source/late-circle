@@ -419,6 +419,7 @@ function HomeContent() {
 
   const handlePeriodCame = () => {
     setShowPeriodCame(true);
+    setShowClaimFlow(false); // Close the claim flow modal
     localStorage.setItem('lateCircleLastPeriod', new Date().toISOString());
     
     const newHistory = [...JSON.parse(localStorage.getItem('lateCircleHistory') || '[]'), lastPeriodDate];
@@ -435,7 +436,7 @@ function HomeContent() {
   const circleCircumference = 2 * Math.PI * ringRadius;
   const strokeDashoffset = isDone ? 0 : circleCircumference;
 
-  if (!isLoaded) return <div className="h-screen w-full bg-[#FFF0F3]" />;
+  if (!isLoaded) return <div className="h-screen w-full bg-[#F1EBFF]" />;
 
   const claimMessages = [
     "I have it now. You just started, and I am already with you.",
@@ -535,10 +536,10 @@ function HomeContent() {
   };
 
   return (
-    <main className={`h-screen overflow-y-auto flex flex-col items-center pt-12 pb-40 px-6 font-sans relative animate-page-enter transition-colors duration-500 ${isLate ? 'bg-[#FFE5EC]' : 'bg-[#FFF0F3]'} text-[#4A2C35]`}>
+    <main className={`h-screen overflow-y-auto flex flex-col items-center pt-12 pb-40 px-6 font-sans relative animate-page-enter transition-colors duration-500 ${isLate ? 'bg-[#E9E1F7]' : 'bg-[#F1EBFF]'} text-[#4A2C35]`}>
       
       {showPeriodCame && (
-        <div className="absolute inset-0 bg-[#FFF0F3] z-200 flex flex-col items-center justify-center p-6 text-center animate-fade-in">
+        <div className="absolute inset-0 bg-[#F1EBFF] z-200 flex flex-col items-center justify-center p-6 text-center animate-fade-in">
           <h1 className="text-4xl font-bold text-[#8A2C3E] mb-4 animate-pop-in">
             {lateDays >= 21 ? "She's here. You did it. ✨" : lateDays >= 7 ? "She finally came! ✨" : "She's here! ✨"}
           </h1>
@@ -880,6 +881,45 @@ function HomeContent() {
 
       {/* --- MODALS --- */}
 
+      {/* CLAIM FLOW MODAL - THE MISSING PIECE */}
+      {showClaimFlow && (
+        <div className="fixed inset-0 bg-[#4A2C35]/20 backdrop-blur-sm z-200 flex items-center justify-center p-6 animate-fade-in">
+          <div className="w-full max-w-sm bg-white rounded-3xl p-6 shadow-[0_24px_48px_-16px_rgba(74,44,53,0.25)] text-center animate-slide-up border border-[#4A2C35]/5 relative overflow-hidden">
+            
+            <div className="w-16 h-16 rounded-full bg-[#FFE5EC] flex items-center justify-center mx-auto mb-4">
+              <span className="text-3xl">🌸</span>
+            </div>
+            
+            <h3 className="text-xl font-bold text-[#4A2C35] mb-2">I have it now.</h3>
+            <p className="text-sm text-[#4A2C35]/70 mb-6 leading-relaxed px-2">
+              {claimDayText}
+            </p>
+
+            <div className="bg-[#FFF0F3] border border-[#4A2C35]/10 rounded-2xl p-4 mb-6 w-full text-left">
+              <h4 className="text-[10px] font-bold text-[#4A2C35]/40 uppercase tracking-widest mb-2">Your next step</h4>
+              <p className="text-xs text-[#4A2C35]/70 leading-relaxed">
+                When you see her, tap the button below. I will mark today as Day 1 and celebrate with you.
+              </p>
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <button 
+                onClick={handlePeriodCame}
+                className="w-full bg-[#FF8FA3] text-white py-3.5 rounded-xl font-bold active:scale-95 shadow-md text-sm animate-pulse"
+              >
+                My period started ✅
+              </button>
+              <button 
+                onClick={() => setShowClaimFlow(false)}
+                className="w-full bg-white border border-transparent text-[#4A2C35]/40 py-2 text-xs font-medium active:scale-95"
+              >
+                I will tell you later
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* NIGHT CHECK MODAL */}
       {showNightCheck && (
         <div className="fixed inset-0 bg-[#4A2C35]/20 backdrop-blur-sm z-200 flex items-center justify-center p-6 animate-fade-in">
@@ -1125,7 +1165,7 @@ function HomeContent() {
       )}
 
       {activeModal === 'calm' && (
-        <div className="absolute inset-0 bg-[#FFF0F3] z-50 flex flex-col pt-12 px-6">
+        <div className="absolute inset-0 bg-[#F1EBFF] z-50 flex flex-col pt-12 px-6">
           {calmView === 'menu' && (
             <div className="flex flex-col h-full animate-fade-in relative">
               <button onClick={() => setActiveModal(null)} className="absolute top-0 left-0 text-[#4A2C35]/50 text-sm font-medium active:opacity-50 flex items-center gap-1">← Back</button>
@@ -1208,7 +1248,7 @@ function HomeContent() {
       )}
 
       {showGoodnight && (
-        <div className="absolute inset-0 bg-[#FFF0F3] z-50 flex flex-col items-center pt-12 px-6 pb-28">
+        <div className="absolute inset-0 bg-[#F1EBFF] z-50 flex flex-col items-center pt-12 px-6 pb-28">
           <div className="flex items-center gap-3 mb-2 text-[#9CAF88]">
             <span className="text-3xl">🌙</span>
             <h1 className="text-3xl font-serif text-[#4A2C35]">Goodnight, fine girl</h1>
@@ -1265,7 +1305,7 @@ function HomeContent() {
       )}
 
       {isNightClosed && (
-        <div className="fixed inset-0 bg-[#FFF0F3] z-100 flex flex-col items-center justify-center px-6 pb-28 animate-fade-in">
+        <div className="fixed inset-0 bg-[#F1EBFF] z-100 flex flex-col items-center justify-center px-6 pb-28 animate-fade-in">
           <div className="w-24 h-24 rounded-full bg-[#9CAF88]/15 flex items-center justify-center mb-6">
             <span className="text-5xl">🌙</span>
           </div>
@@ -1373,7 +1413,7 @@ function HomeContent() {
 
 export default function Home() {
   return (
-    <Suspense fallback={<div className="h-screen w-full bg-[#FFF0F3]" />}>
+    <Suspense fallback={<div className="h-screen w-full bg-[#F1EBFF]" />}>
       <HomeContent />
     </Suspense>
   );

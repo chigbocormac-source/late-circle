@@ -6,6 +6,7 @@ import { getOviReply, ChatState, UserCycleData } from '@/utils/chatEngine';
 import { getCyclePhase, getRealCycleLength } from '../../utils/cycleEngine';
 import { localDateKey } from '../../utils/analytics';
 import { OviSearchHeader } from '../components/OviSearchHeader';
+import { getCheckInPrompt, hasCheckedInToday, saveChatCheck, CheckType } from '@/utils/checkInPrompts';
 
 type Message = {
   id: string;
@@ -13,6 +14,9 @@ type Message = {
   text: string;
   isEmergency?: boolean;
   chips?: string[];
+  isCheckIn?: boolean;
+  checkType?: CheckType;
+  asksName?: boolean;
 };
 
 // --- Shared cycle-day math (mirrors today/page.tsx) ---
@@ -58,7 +62,7 @@ function getUserCycleData(): UserCycleData | undefined {
   };
 }
 
-// --- NEW: Real time greeting ---
+// --- Real time greeting ---
 function getTimeGreeting() {
   const hour = new Date().getHours();
   if (hour >= 5 && hour < 12) return 'this morning';
@@ -74,6 +78,8 @@ export default function OviChat() {
   const [hasConsent, setHasConsent] = useState<boolean | null>(null);
   const [isTyping, setIsTyping] = useState(false);
   const [chatState, setChatState] = useState<ChatState>({});
+  const [checkInAsked, setCheckInAsked] = useState(false);
+  const [herName, setHerName] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -94,9 +100,154 @@ export default function OviChat() {
     }
   }, [hasConsent]);
 
+  // --- One Check prompt inside chat (once, only if she hasn't checked in today) ---
+  useEffect(() => {
+    if (hasConsent !== true && hasConsent !== false) return;
+    if (checkInAsked) return;
+    if (typeof window === 'undefined') return;
+
+    const lastPeriod = localStorage.getItem('lateCircleLastPeriod');
+    let checkType: CheckType = 'food';
+    if (lastPeriod) {
+      const last = new Date(lastPeriod);
+      const now = new Date();
+      last.setHours(0, 0, 0, 0);
+      now.setHours(0, 0, 0, 0);
+      const day = Math.floor((now.getTime() - last.getTime()) / 86400000) + 1;
+      if (day <= 15) checkType = 'sleep';
+      else if (day <= 35) checkType = 'walk';
+      else if (day <= 80) checkType = 'food';
+      else checkType = 'calm';
+    }
+
+    if (hasCheckedInToday()) {
+      setCheckInAsked(true);
+      return;
+    }
+
+    const prompt = getCheckInPrompt(checkType);
+    const t = setTimeout(() => {
+      setMessages(prev => [
+        ...prev,
+        {
+          id: `checkin-${Date.now()}`,
+          role: 'ovi',
+          text: prompt.question,
+          chips: prompt.chips,
+          isCheckIn: true,
+          checkType,
+        },
+      ]);
+      setCheckInAsked(true);
+    }, 900);
+    return () => clearTimeout(t);
+  }, [hasConsent, checkInAsked]);
+
   const handleSend = (text: string) => {
     if (!text.trim()) return;
 
+    // --- IDENTITY CHECK FIRST - never save this as a name ---
+    const lower = text.toLowerCase().trim();
+    const isIdentityQuestion =
+      lower.includes('are you a boy') ||
+      lower.includes('are you a girl') ||
+      lower.includes('are you male') ||
+      lower.includes('are you female') ||
+      lower.includes('are you a woman') ||
+      lower.includes('are you a man') ||
+      lower.includes('are you human') ||
+      lower.includes('are you real') ||
+      lower.includes('who are you');
+
+    if (isIdentityQuestion) {
+      const userMsg: Message = { id: Date.now().toString(), role: 'user', text };
+      setMessages(prev => [...prev, userMsg]);
+      setInput('');
+      setIsTyping(true);
+
+      setTimeout(() => {
+        setMessages(prev => [
+          ...prev,
+          {
+            id: (Date.now() + 1).toString(),
+            role: 'ovi',
+            text: "love, I'm your big sister Ovi. I'm here for girls like you. I'm not a boy. What's your name?",
+            chips: ["My period is late", "I had sex, am I pregnant?", "How can I feel better right now?"],
+            asksName: true,
+          },
+        ]);
+        setIsTyping(false);
+      }, 1000);
+      return;
+    }
+
+    // --- Name capture: only if Ovi just asked "what's your name?" ---
+    const lastOviMsg = [...messages].reverse().find(m => m.role === 'ovi');
+    if (lastOviMsg?.asksName && text.trim().length <= 30) {
+      const name = text.trim().replace(/[.!?]+$/, '');
+      const prettyName = name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
+      setHerName(prettyName);
+
+      const userMsg: Message = { id: Date.now().toString(), role: 'user', text };
+      setMessages(prev => [...prev, userMsg]);
+      setInput('');
+      setIsTyping(true);
+
+      setTimeout(() => {
+        setMessages(prev => [
+          ...prev,
+          {
+            id: (Date.now() + 1).toString(),
+            role: 'ovi',
+            text: `${prettyName}. That is a beautiful name, love. I will remember it. 💜\n\nWhat do you want to understand today?`,
+            chips: ["My period is late", "I had sex, am I pregnant?", "How can I feel better right now?"],
+          },
+        ]);
+        setIsTyping(false);
+      }, 1000);
+      return;
+    }
+
+    // --- Check-in chip response ---
+    const lastOvi = [...messages].reverse().find(m => m.role === 'ovi');
+    if (lastOvi?.isCheckIn && lastOvi.checkType) {
+      const prompt = getCheckInPrompt(lastOvi.checkType);
+      const didIt = text.startsWith('✅');
+      const tried = text.startsWith('🤍');
+
+      const userMsg: Message = { id: Date.now().toString(), role: 'user', text };
+      setMessages(prev => [...prev, userMsg]);
+      setInput('');
+      setIsTyping(true);
+
+      if (didIt || tried) {
+        saveChatCheck(lastOvi.checkType);
+      }
+
+      setTimeout(() => {
+        const why = didIt
+          ? prompt.why
+          : tried
+            ? `${prompt.why} Small small is still progress. That counts.`
+            : `That's okay, love. No pressure. I'm still here whenever you're ready. Your One Check is waiting on the Today page.`;
+
+        setMessages(prev => [
+          ...prev,
+          {
+            id: (Date.now() + 1).toString(),
+            role: 'ovi',
+            text: why,
+            chips: didIt || tried
+              ? ['Tell me my message for today', 'How can I feel better right now?', 'My period is late']
+              : ['How can I feel better right now?', 'My period is late', 'I am scared'],
+          },
+        ]);
+        setIsTyping(false);
+      }, 1200);
+      return;
+    }
+
+    // --- Normal chat flow ---
     const userMsg: Message = { id: Date.now().toString(), role: 'user', text };
     setMessages(prev => [...prev, userMsg]);
     setInput('');
@@ -112,7 +263,8 @@ export default function OviChat() {
         role: 'ovi',
         text: reply.text,
         isEmergency: reply.isEmergency,
-        chips: reply.chips
+        chips: reply.chips,
+        asksName: reply.asksName,
       };
 
       setMessages(prev => [...prev, oviMsg]);

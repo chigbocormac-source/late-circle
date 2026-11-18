@@ -386,6 +386,78 @@ export const OVI_KNOWLEDGE: Record<string, { text: string; chips: string[] }> = 
   'Build my story for the doctor': {
     text: "Love, this will help you talk to the doctor without forgetting.\n\nTell them: 1. When your last period started. 2. How many days your cycle usually is. 3. What symptom is worrying you. 4. How long it has been happening.\n\nYou can copy that from Ovi and show them. You are doing a brave thing by asking for help.",
     chips: ["I am shy to ask a nurse or pharmacist", "My period is late", "Why is my period skipping months? Do I have PCOS or fibroids?"]
+  },
+
+  // --- Doctor language translator (Step 3 + 4) ---
+  'Doctor said PCOS': {
+    text: "Breathe, love. I am here.\n\nPCOS is a big word, but it is not a death sentence. Let me explain it like a sister would.\n\nImagine your body is like a garden. Every month, your garden is supposed to release one egg, like a flower. With PCOS, the garden makes many small flowers, but sometimes none of them open. So your period gets confused and comes late.\n\nThat's all it is. Your garden is a little crowded. It is not broken.\n\nMillions of girls in Nigeria have this. Millions. And they live normal lives. They have babies. They are fine.\n\nIt does NOT mean you cannot have children. It does NOT mean you are less of a woman.\n\nDid the doctor give you medicine? Or did he say to change your food and sleep first?",
+    chips: ["He gave medicine", "He said change lifestyle", "He didn't explain, I'm confused"]
+  },
+  "He didn't explain, I'm confused": {
+    text: "That is not your fault. Some doctors don't explain. That is why I am here.\n\nAsk me anything. What exactly did he say? I will help you understand it.",
+    chips: ["Doctor said I need a scan", "Doctor said PCOS", "Doctor said hormonal imbalance"]
+  },
+  'Doctor said I need a scan': {
+    text: "Okay, a scan sounds scary, but it is actually good news. It means the doctor wants to SEE, not guess.\n\nA scan is just a camera. For your womb.\n\nThere are 2 types:\n\n1. Pelvic scan (on your tummy): They put cold gel on your tummy and move a small thing around. No pain. Takes 10 minutes.\n\n2. Vaginal scan: They put a small stick inside, with a condom on it. It can feel uncomfortable, but not painful. You can say NO if you are not comfortable. You have the right to say 'Please do the tummy one only.'\n\nYou don't need to be ashamed. The nurse has seen thousands of girls. You are just another girl taking care of herself.\n\nDo you want me to help you prepare for the scan? What to wear, what to ask, how much it costs?",
+    chips: ["Yes, prepare me", "I'm scared of the cost", "I'm scared it will hurt"]
+  },
+  "I'm scared of the cost": {
+    text: "I understand. In PH, a pelvic scan is usually N15,000 - N30,000 in a private lab, cheaper in a teaching hospital. Don't go alone if you can. Take someone. And tell them 'I want a pelvic ultrasound for PCOS check.' That is the name.",
+    chips: ["Yes, prepare me", "I'm scared it will hurt", "Build my story for the doctor"]
+  },
+  "I'm scared it will hurt": {
+    text: "The tummy scan does not hurt at all. Just cold gel and a little pressure. The vaginal scan can feel uncomfortable, but you can always ask for the tummy one only. You are in charge of your body. Would you like me to tell you exactly what to say when you get there?",
+    chips: ["Yes, prepare me", "I'm scared of the cost", "I am scared"]
+  },
+  'Doctor said hormonal imbalance': {
+    text: "Hormonal imbalance sounds like your body is fighting you. It's not.\n\nHormones are just messengers in your body. Like WhatsApp messages telling your period 'Come now' or 'Wait.'\n\nSometimes, because of stress, no sleep, exams, or not eating well, the messages get delayed. So your period comes late.\n\nIt's like NEPA. The light is not gone. The wire is just a little loose.\n\nYour body is not broken. Your messages are just late.\n\nAnd we can help the messages come on time. With sleep, food, and calm. That's why your 4 Circles matter.",
+    chips: ["Doctor said come back in 3 months", "Doctor said PCOS", "How can I feel better right now?"]
+  },
+  'Doctor said come back in 3 months': {
+    text: "He didn't abandon you. He gave you time.\n\nHe wants to see if your body can balance itself with good sleep and food first, before giving you strong medicine.\n\nThat is actually a good doctor. A bad doctor would just give you drugs immediately.\n\nLet's use these 3 months. I will be here every day. We will track together. When you go back, you will have 3 more months of proof to show him.\n\nYou are not waiting. You are healing.",
+    chips: ["What can you help me with?", "Build my story for the doctor", "How can I feel better right now?"]
+  },
+  'Yes, prepare me': {
+    text: "Okay, love. Here is your pep talk before you go:\n\n1. You are not broken. You are a girl whose body is asking for attention. That's normal.\n\n2. You don't have to be brave. If you feel shy, just say: 'Doctor, I tracked everything in my app. Can you please look?' That's it. You don't need big English.\n\n3. You deserve to be heard. If he rushes you, show him the RED FLAGS box. Say: 'Please, can you check this part?'\n\nI am in your pocket. I am going with you. I am so proud of you for going.",
+    chips: ["I'm scared, stay with me", "I'm ready, let's go", "Build my story for the doctor"]
+  },
+  "I'm scared, stay with me": {
+    text: "Okay, I'm staying.\n\nBreathe with me. In... 2... 3... 4... Out... 2... 3... 4...\n\nYou are not going to be judged. You are going to be helped. And after today, you will know more about yourself than you did yesterday.\n\nDo you want me to tell you exactly what to say when you enter?",
+    chips: ["Yes, tell me what to say", "I'm ready, let's go", "I am scared"]
+  },
+  'Yes, tell me what to say': {
+    text: "Say this, word for word:\n\n'Good morning Doctor. My period is 7 days late. I tracked my cycles for 6 months. This is my report. I am worried, please help me understand.'\n\nThat's all. You don't need to say more. Let him read.",
+    chips: ["I'm ready, let's go", "Build my story for the doctor", "I am scared"]
+  },
+  "I'm ready, let's go": {
+    text: "I'm so proud of you, love. You are walking in with proof. You are not a girl who is confused — you are a girl who has data. Doctors respect data. Go well. I'll be here when you come back.",
+    chips: ["I went to the doctor", "Build my story for the doctor", "How can I feel better right now?"]
+  },
+  'I went to the doctor': {
+    text: "You did it. You went. I'm so proud of you.\n\nHow did it go? Did you feel heard?",
+    chips: ["He listened", "He rushed me", "He gave me tests", "I need to cry"]
+  },
+  'He rushed me': {
+    text: "I'm sorry, love. That was not your fault. You did your part. You showed up with proof. Some doctors are in a hurry. It doesn't mean your pain is not real. Do you want me to help you prepare for a second doctor?",
+    chips: ["Yes, prepare me", "I need to cry", "He gave me tests"]
+  },
+  'I need to cry': {
+    text: "Cry. I'm here. You don't have to be strong right now. You were brave today.",
+    chips: ["How can I feel better right now?", "I am scared", "My period is late"]
+  },
+  'He listened': {
+    text: "That makes my heart glad, love. You showed up, you spoke, and someone heard you. That is a win. How does your body feel now?",
+    chips: ["He gave me tests", "How can I feel better right now?", "What can you help me with?"]
+  },
+  'He gave me tests': {
+    text: "Good, love. Tests mean he wants to understand your body properly. That is real care. When your results come back, come and tell me what they said — big words and all. I will help you understand them in simple sister language.",
+    chips: ["Doctor said PCOS", "Doctor said I need a scan", "Doctor said hormonal imbalance"]
+  },
+
+  // --- Step 2: Chat check-in chip target ---
+  'Tell me my message for today': {
+    text: "Your message is waiting for you on the Today page, love. Tap your circle there and it will open. I'll be right here after. 💜",
+    chips: ["My period is late", "How can I feel better right now?", "I am scared"]
   }
 };
 
@@ -404,6 +476,12 @@ const KEYWORD_ALIASES: Array<{ keywords: string[]; targetKey: string }> = [
   { keywords: ['what do you love about me', 'why do you love me'], targetKey: 'What do you love about me?' },
   { keywords: ['what is this', 'what is ovi', 'what are you doing here'], targetKey: 'What is this?' },
   { keywords: ['helllo', 'heyy', 'hiii', 'hi', 'hello', 'hey'], targetKey: 'How are you' },
+  { keywords: ['doctor said pcos', 'told me i have pcos'], targetKey: 'Doctor said PCOS' },
+  { keywords: ['doctor said scan', 'need a scan', 'ultrasound'], targetKey: 'Doctor said I need a scan' },
+  { keywords: ['hormonal imbalance', 'hormone imbalance'], targetKey: 'Doctor said hormonal imbalance' },
+  { keywords: ['come back in 3 months', 'three months'], targetKey: 'Doctor said come back in 3 months' },
+  { keywords: ['i went to the doctor', 'saw the doctor'], targetKey: 'I went to the doctor' },
+  { keywords: ['message for today', 'my message'], targetKey: 'Tell me my message for today' },
 ];
 
 export function resolveOviResponse(rawInput: string) {

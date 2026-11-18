@@ -43,7 +43,6 @@ export default function CyclePage() {
     const savedBleed = localStorage.getItem('lateCircleLastBleedDays');
     if (savedBleed) setLastBleedDays(parseInt(savedBleed));
 
-    // Check if she already acknowledged the warning today
     const acknowledged = localStorage.getItem('lateCircleAcknowledgedLateWarning');
     if (acknowledged === new Date().toISOString().split('T')[0]) {
       setShowLateWarning(false);
@@ -127,20 +126,15 @@ export default function CyclePage() {
   const isLastPeriod = (d: Date) => lastPeriodDate && isSameDay(d, new Date(lastPeriodDate));
   const isHistoryDay = (d: Date) => history.some(h => isSameDay(d, new Date(h)));
 
-  // SMART CALENDAR COLOR LOGIC
   const getPhaseColor = (dateToCheck: Date) => {
     if (!lastPeriodDate) return 'bg-transparent text-[#4A2C35]/70';
-    
     const last = new Date(lastPeriodDate);
     last.setHours(0,0,0,0);
     const check = new Date(dateToCheck);
     check.setHours(0,0,0,0);
-    
     const diffDays = Math.floor((check.getTime() - last.getTime()) / (1000 * 60 * 60 * 24));
-    const simulatedDay = (diffDays % average) + 1; // Wrap around if looking into future months
-    
+    const simulatedDay = (diffDays % average) + 1;
     const phase = getCyclePhase(simulatedDay, average);
-    
     switch (phase.id) {
       case 'rest': return 'bg-[#FFE5EC] text-[#8A2C3E]'; 
       case 'fresh': return 'bg-[#F0F5ED] text-[#5A7350]'; 
@@ -154,7 +148,6 @@ export default function CyclePage() {
   const handlePeriodStart = () => {
     const d = new Date();
     const todayStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-    
     if (lastPeriodDate) {
       const newHistory = [...history, lastPeriodDate];
       setHistory(newHistory);
@@ -279,7 +272,6 @@ export default function CyclePage() {
   const hasLoggedSymptoms = loggedTags.length > 0;
   const topTag = loggedTags[0] || null;
 
-  // Helper to dismiss the warning for today
   const dismissWarning = () => {
     const todayKey = new Date().toISOString().split('T')[0];
     localStorage.setItem('lateCircleAcknowledgedLateWarning', todayKey);
@@ -287,7 +279,7 @@ export default function CyclePage() {
   };
 
   return (
-    <main className="min-h-screen bg-[#FFF0F3] text-[#4A2C35] flex flex-col items-center pt-8 px-6 pb-32 font-sans relative animate-page-enter">
+    <main className="min-h-screen bg-[#F1EBFF] text-[#4A2C35] flex flex-col items-center pt-8 px-6 pb-32 font-sans relative animate-page-enter">
       <button onClick={() => router.push('/today')} className="absolute top-6 left-6 text-[#4A2C35]/50 text-sm font-medium active:opacity-50">← Today</button>
       <h1 className="text-2xl font-serif text-[#4A2C35] mb-3 tracking-[0.2em]">YOUR CYCLE</h1>
 
@@ -326,8 +318,22 @@ export default function CyclePage() {
         </div>
       </button>
 
-      {/* WARNING CARDS - DISMISSIBLE */}
-      {lateDays > 0 && showLateWarning && (
+      {lateDays > 0 && lateDays <= 2 && showLateWarning && (
+        <div className="w-full max-w-sm bg-white border border-[#9CAF88]/30 p-4 rounded-2xl mb-4 shadow-sm animate-fade-in">
+          <p className="text-[10px] font-bold text-[#5A7350] uppercase tracking-widest mb-1">Still inside your window</p>
+          <p className="text-sm text-[#4A2C35] leading-relaxed mb-3">
+            You are {lateDays} {lateDays === 1 ? 'day' : 'days'} past your average, but this is still inside your normal window. Cycles shift by a day or two all the time — stress, sleep, travel, even the weather. Breathe. Nothing is wrong yet.
+          </p>
+          <p className="text-sm text-[#4A2C35]/70 leading-relaxed mb-3">
+            I am watching with you. If she does not come in the next few days, I will check in again.
+          </p>
+          <button onClick={dismissWarning} className="w-full bg-[#F1EBFF] text-[#4A2C35]/60 py-2 rounded-xl text-xs font-bold active:scale-95 transition-transform">
+            I hear you, Ovi 🤍
+          </button>
+        </div>
+      )}
+
+      {lateDays > 2 && showLateWarning && (
         <div className="w-full max-w-sm bg-white border border-[#FF8FA3]/30 p-4 rounded-2xl mb-4 shadow-sm animate-fade-in">
           <p className="text-[10px] font-bold text-[#8A2C3E] uppercase tracking-widest mb-1">Your cycle is taking longer this month</p>
           <p className="text-sm text-[#4A2C35] leading-relaxed mb-3">
@@ -340,7 +346,7 @@ export default function CyclePage() {
             Let's look at your records together, without jumping to conclusions.
           </p>
           <a href={whatsappLink} target="_blank" rel="noopener noreferrer" className="w-full bg-[#4A2C35] text-white py-2.5 rounded-xl font-bold text-xs text-center block mb-2">Tell someone I trust 💬</a>
-          <button onClick={dismissWarning} className="w-full bg-[#FFF0F3] text-[#4A2C35]/60 py-2 rounded-xl text-xs font-bold active:scale-95 transition-transform">
+          <button onClick={dismissWarning} className="w-full bg-[#F1EBFF] text-[#4A2C35]/60 py-2 rounded-xl text-xs font-bold active:scale-95 transition-transform">
             I hear you, Ovi 🤍
           </button>
         </div>
@@ -352,7 +358,7 @@ export default function CyclePage() {
           <p className="text-sm text-[#4A2C35] leading-relaxed mb-3">
             If you want peace of mind, a quick check-up can help. No pressure. You can also wait a few more days and see. Ovi is here to keep your records clear. A nurse or doctor can give you real answers when you are ready.
           </p>
-          <button onClick={dismissWarning} className="w-full bg-[#FFF0F3] text-[#4A2C35]/60 py-2 rounded-xl text-xs font-bold active:scale-95 transition-transform">
+          <button onClick={dismissWarning} className="w-full bg-[#F1EBFF] text-[#4A2C35]/60 py-2 rounded-xl text-xs font-bold active:scale-95 transition-transform">
             I hear you, Ovi 🤍
           </button>
         </div>
@@ -364,7 +370,7 @@ export default function CyclePage() {
           <p className="text-sm text-[#4A2C35] leading-relaxed mb-3">
             It has been <strong>{lateDays} days</strong>. This is a long time. A doctor can check your hormones and give you real answers. You deserve peace of mind. Please book a visit soon.
           </p>
-          <button onClick={dismissWarning} className="w-full bg-[#FFF0F3] text-[#4A2C35]/60 py-2 rounded-xl text-xs font-bold active:scale-95 transition-transform">
+          <button onClick={dismissWarning} className="w-full bg-[#F1EBFF] text-[#4A2C35]/60 py-2 rounded-xl text-xs font-bold active:scale-95 transition-transform">
             I hear you, Ovi 🤍
           </button>
         </div>
@@ -377,16 +383,13 @@ export default function CyclePage() {
         </div>
       )}
 
-      {/* REST OF THE PAGE */}
       {cycleLengths.length >= 2 && (() => {
         const recent3 = cycleLengths.slice(-3);
         const min = Math.min(...recent3);
         const max = Math.max(...recent3);
         const variance = max - min;
-        
         let summary = "";
         let badgeColor = "text-[#9CAF88]";
-        
         if (variance <= 3) {
           summary = `Your last 3 cycles were ${recent3.join(', ')} days. Ovi is learning your pattern.`;
         } else if (variance <= 7) {
@@ -396,7 +399,6 @@ export default function CyclePage() {
           summary = `Your cycle changes a lot. Your last 3 cycles were ${recent3.join(', ')} days. This is worth mentioning to a nurse when you see one.`;
           badgeColor = "text-[#8A2C3E]";
         }
-
         return (
           <div className="w-full max-w-sm bg-white border border-[#4A2C35]/5 rounded-2xl p-4 mb-4 shadow-sm">
             <p className={`text-[10px] font-bold ${badgeColor} uppercase tracking-widest mb-1`}>Your Cycle Summary</p>
@@ -408,9 +410,9 @@ export default function CyclePage() {
       {calMonth && (
         <div className="w-full max-w-sm bg-white border border-[#4A2C35]/5 rounded-3xl p-4 mb-4 shadow-sm">
           <div className="flex justify-between items-center mb-2">
-            <button onClick={() => setCalMonth(prev => prev ? new Date(prev.getFullYear(), prev.getMonth() - 1, 1) : null)} className="w-8 h-8 rounded-full bg-[#FFF0F3] font-bold">‹</button>
+            <button onClick={() => setCalMonth(prev => prev ? new Date(prev.getFullYear(), prev.getMonth() - 1, 1) : null)} className="w-8 h-8 rounded-full bg-[#F1EBFF] font-bold">‹</button>
             <p className="font-bold text-xs">{calMonth.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })}</p>
-            <button onClick={() => setCalMonth(prev => prev ? new Date(prev.getFullYear(), prev.getMonth() + 1, 1) : null)} className="w-8 h-8 rounded-full bg-[#FFF0F3] font-bold">›</button>
+            <button onClick={() => setCalMonth(prev => prev ? new Date(prev.getFullYear(), prev.getMonth() + 1, 1) : null)} className="w-8 h-8 rounded-full bg-[#F1EBFF] font-bold">›</button>
           </div>
           <div className="grid grid-cols-7 gap-1 text-center text-[10px] font-bold text-[#4A2C35]/40 mb-1">
             {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d, i) => <div key={i}>{d}</div>)}
@@ -418,13 +420,11 @@ export default function CyclePage() {
           <div className="grid grid-cols-7 gap-1 text-center text-[11px]">
             {calendarDays.map((d, i) => {
               if (!d) return <div key={i} />;
-              
               const todayIs = isSameDay(d, new Date());
               const inWin = inWindow(d);
               const lastP = isLastPeriod(d);
               const hist = isHistoryDay(d);
               const phaseColorClass = getPhaseColor(d);
-
               return (
                 <div key={i} className={`py-2 rounded-xl font-medium relative transition-colors ${
                   todayIs ? 'bg-[#4A2C35] text-white font-bold shadow-md' 
@@ -438,8 +438,6 @@ export default function CyclePage() {
               );
             })}
           </div>
-          
-          {/* MINI LEGEND */}
           <div className="flex flex-wrap justify-center gap-2 mt-4 pt-3 border-t border-[#4A2C35]/5 text-[9px] font-bold text-[#4A2C35]/50 uppercase tracking-wider">
             <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-[#FFE5EC] border border-[#FF8FA3]"></span> Rest</span>
             <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-[#F0F5ED] border border-[#9CAF88]"></span> Fresh</span>
@@ -447,7 +445,6 @@ export default function CyclePage() {
             <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-[#FFF0E6] border border-[#FF8FA3]"></span> Chop</span>
             <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-[#F3E8FF] border border-[#8A2C3E]"></span> Ready</span>
           </div>
-
           <p className="text-[9px] text-[#4A2C35]/50 mt-3 text-center">
             Expected: {windowStart.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} - {windowEnd.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
           </p>
@@ -458,7 +455,6 @@ export default function CyclePage() {
         <p className="text-[10px] font-bold text-[#9CAF88] uppercase tracking-widest mb-3">
           Your Month in One Look — {today ? today.toLocaleDateString('en-GB', { month: 'long' }) : ''}
         </p>
-        
         <div className="flex flex-col gap-2.5">
           <div className="flex items-start gap-2">
             <span className="text-[#9CAF88] text-xs font-bold mt-0.5">•</span>
@@ -466,22 +462,19 @@ export default function CyclePage() {
               Your recent pattern: <strong>{average} days</strong> — {longestCycle - average <= 3 ? 'Consistent for you' : 'Shifts a little'}
             </p>
           </div>
-
           <div className="flex items-start gap-2">
             <span className="text-[#9CAF88] text-xs font-bold mt-0.5">•</span>
             <p className="text-xs text-[#4A2C35]/80">
               You bled for: <strong>{lastBleedDays !== null ? `${lastBleedDays} days` : 'Not recorded yet'}</strong>
             </p>
           </div>
-
           <div className="flex items-start gap-2">
             <span className="text-[#9CAF88] text-xs font-bold mt-0.5">•</span>
             <p className="text-xs text-[#4A2C35]/80">
               Most logged: <strong>{hasLoggedSymptoms && topTag ? topTag : 'No symptoms recorded'}</strong>
             </p>
           </div>
-
-          <div className="bg-[#FFF0F3] rounded-xl p-3 mt-1 border border-[#FFB3C1]/20">
+          <div className="bg-[#F1EBFF] rounded-xl p-3 mt-1 border border-[#FFB3C1]/20">
             <p className="text-[10px] font-bold text-[#8A2C3E] uppercase tracking-widest mb-1">Ovi's Note</p>
             <p className="text-xs text-[#4A2C35] leading-relaxed italic">
               {lateDays > 0 
@@ -512,15 +505,14 @@ export default function CyclePage() {
         <span className="text-[#4A2C35]/30 text-lg">›</span>
       </button>
 
-      {/* MODALS */}
       {showConfirm && (
         <div className="fixed inset-0 bg-[#4A2C35]/20 backdrop-blur-sm z-100 flex items-center justify-center p-6 animate-fade-in">
           <div className="bg-white border border-[#4A2C35]/5 rounded-3xl p-6 w-full max-w-sm shadow-[0_24px_48px_-16px_rgba(74,44,53,0.25)] text-center">
-            <div className="w-16 h-16 rounded-full bg-[#FFF0F3] flex items-center justify-center mx-auto mb-4"><span className="text-3xl">🌸</span></div>
+            <div className="w-16 h-16 rounded-full bg-[#F1EBFF] flex items-center justify-center mx-auto mb-4"><span className="text-3xl">🌸</span></div>
             <h3 className="text-xl font-bold text-[#4A2C35] mb-2">Did your period start?</h3>
             <p className="text-sm text-[#4A2C35]/60 mb-6 leading-relaxed">This will save to your history and reset your cycle to Day 1.</p>
             <div className="flex gap-3">
-              <button onClick={() => setShowConfirm(false)} className="flex-1 py-3 rounded-full border border-[#4A2C35]/10 text-[#4A2C35]/60 font-medium active:scale-95 transition-transform bg-[#FFF0F3]/50">Cancel</button>
+              <button onClick={() => setShowConfirm(false)} className="flex-1 py-3 rounded-full border border-[#4A2C35]/10 text-[#4A2C35]/60 font-medium active:scale-95 transition-transform bg-[#F1EBFF]/50">Cancel</button>
               <button onClick={() => { setShowConfirm(false); handlePeriodStart(); }} className="flex-1 py-3 rounded-full bg-[#4A2C35] text-white font-bold active:scale-95 transition-transform shadow-[0_8px_20px_-4px_rgba(74,44,53,0.3)]">Yes, reset</button>
             </div>
           </div>
@@ -546,7 +538,7 @@ export default function CyclePage() {
           <div className="w-full max-w-sm bg-white rounded-3xl p-5 shadow-[0_24px_48px_-16px_rgba(74,44,53,0.25)] animate-slide-up" onClick={(e) => e.stopPropagation()}>
             <div className="flex justify-between items-center mb-3">
               <h3 className="text-lg font-bold text-[#4A2C35]">Your share card</h3>
-              <button onClick={() => setSharePreview(null)} className="w-8 h-8 rounded-full bg-[#FFF0F3] flex items-center justify-center text-[#4A2C35]/60 font-bold active:scale-95">✕</button>
+              <button onClick={() => setSharePreview(null)} className="w-8 h-8 rounded-full bg-[#F1EBFF] flex items-center justify-center text-[#4A2C35]/60 font-bold active:scale-95">✕</button>
             </div>
             <img src={sharePreview.url} alt="Your share card" className="w-full rounded-2xl border border-[#4A2C35]/10 mb-3 select-none" draggable={false} />
             <p className="text-[11px] text-[#4A2C35]/60 text-center mb-3 leading-relaxed">Long-press the image above to save it. The caption is already copied to your clipboard.</p>
@@ -565,28 +557,26 @@ export default function CyclePage() {
             <div className="w-full max-w-sm bg-white rounded-3xl p-6 shadow-[0_24px_48px_-16px_rgba(74,44,53,0.25)] animate-slide-up" onClick={(e) => e.stopPropagation()}>
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-lg font-bold text-[#4A2C35]">Your 5 Girls</h2>
-                <button onClick={() => setSelectedGirl(null)} className="w-8 h-8 rounded-full bg-[#FFF0F3] flex items-center justify-center text-[#4A2C35]/60 font-bold active:scale-95">✕</button>
+                <button onClick={() => setSelectedGirl(null)} className="w-8 h-8 rounded-full bg-[#F1EBFF] flex items-center justify-center text-[#4A2C35]/60 font-bold active:scale-95">✕</button>
               </div>
-
               <div className="flex gap-1.5 mb-5 overflow-x-auto pb-1 [&::-webkit-scrollbar]:hidden" style={{ scrollbarWidth: 'none' }}>
                 {order.map(id => (
                   <button
                     key={id}
                     onClick={() => setSelectedGirl(id)}
-                    className={`shrink-0 px-3 py-2 rounded-full text-xs font-bold flex items-center gap-1 border transition-all ${selectedGirl === id ? 'bg-[#4A2C35] text-white border-[#4A2C35]' : 'bg-[#FFF0F3] text-[#4A2C35]/70 border-[#4A2C35]/10'}`}
+                    className={`shrink-0 px-3 py-2 rounded-full text-xs font-bold flex items-center gap-1 border transition-all ${selectedGirl === id ? 'bg-[#4A2C35] text-white border-[#4A2C35]' : 'bg-[#F1EBFF] text-[#4A2C35]/70 border-[#4A2C35]/10'}`}
                   >
                     <span>{emojis[id]}</span> {labels[id]}
                     {girl.id === id && <span className="text-[8px] bg-[#FF8FA3] text-white px-1.5 py-0.5 rounded-full ml-0.5">YOU</span>}
                   </button>
                 ))}
               </div>
-
               <div className="flex justify-between items-center mb-2">
                 <h2 className="text-xl font-bold text-[#4A2C35]">{data.title}</h2>
               </div>
               <p className="text-xs text-[#4A2C35]/50 font-medium mb-6">{data.days}</p>
               <div className="flex flex-col gap-4 mb-6">
-                <div className="bg-[#FFF0F3] rounded-xl p-3 border border-[#4A2C35]/5">
+                <div className="bg-[#F1EBFF] rounded-xl p-3 border border-[#4A2C35]/5">
                   <h3 className="text-[10px] font-bold text-[#4A2C35]/40 uppercase tracking-widest mb-1">Why this is happening</h3>
                   <p className="text-sm text-[#4A2C35] leading-relaxed font-medium">{data.why}</p>
                 </div>

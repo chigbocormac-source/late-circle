@@ -1,4 +1,5 @@
 import { OVI_KNOWLEDGE, resolveOviResponse } from './chatContent';
+import { matchClumsyShield } from './clumsyShield';
 import { supabase } from '../app/supabase';
 
 export type Intent = 
@@ -17,6 +18,7 @@ export interface ChatState {
   hasFainted?: boolean;
   acknowledgedBleedingWarning?: boolean;
   pendingQuestion?: string;
+  askedName?: boolean;
 }
 
 export interface UserCycleData {
@@ -34,6 +36,7 @@ export interface OviResponse {
   chips?: string[];
   newState: ChatState;
   action?: 'OPEN_SOFT_PLACE' | 'OPEN_YOU_PLACE';
+  asksName?: boolean;
 }
 
 export const TOPIC_MENU = [
@@ -100,8 +103,99 @@ export function getOviReply(
   const lower = text.toLowerCase();
   const state = { ...currentState }; 
 
+  // --- 0. IDENTITY CHECK FIRST - never treat this as a name or knowledge question ---
+  const isBoyQuestion =
+    lower.includes('are you a boy') ||
+    lower.includes('are you male') ||
+    lower.includes('are you a man') ||
+    lower.includes('are you a guy');
+
+  const isGirlQuestion =
+    lower.includes('are you a girl') ||
+    lower.includes('are you female') ||
+    lower.includes('are you a woman') ||
+    lower.includes('are you a lady');
+
+  const isRealHumanQuestion =
+    lower.includes('are you real') ||
+    lower.includes('are you human') ||
+    lower.includes('who are you');
+
+  // --- 0a. BOY = NO ---
+  if (isBoyQuestion) {
+    return {
+      intent: 'GREETING',
+      text: "No love, I am not a boy. I am your big sister Ovi. I am here for girls like you. What do you want to understand today?",
+      chips: ["My period is late", "I had sex, am I pregnant?", "How can I feel better right now?"],
+      newState: state,
+      asksName: false,
+    };
+  }
+
+  // --- 0b. GIRL = YES ---
+  if (isGirlQuestion) {
+    if (state.askedName) {
+      return {
+        intent: 'GREETING',
+        text: "love, I'm your big sister Ovi. I'm here for girls like you. What do you want to understand today?",
+        chips: ["My period is late", "I had sex, am I pregnant?", "How can I feel better right now?"],
+        newState: state,
+        asksName: false,
+      };
+    }
+    state.askedName = true;
+    return {
+      intent: 'GREETING',
+      text: "love, I'm your big sister Ovi. I'm here for girls like you. What's your name?",
+      chips: ["My period is late", "I had sex, am I pregnant?", "How can I feel better right now?"],
+      newState: state,
+      asksName: true,
+    };
+  }
+
+  // --- 0c. REAL / HUMAN / WHO ARE YOU ---
+  if (isRealHumanQuestion) {
+    return {
+      intent: 'GREETING',
+      text: "I'm real enough to stay up with you at 2am when you can't sleep. I'm your sister in this app. You can trust me. What do you want to understand today?",
+      chips: ["Are you AI?", "What can you help me with?", "How are you"],
+      newState: state,
+      asksName: false,
+    };
+  }
+
   const safetyResponse = checkSafetyEngine(lower, state);
   if (safetyResponse) return safetyResponse;
+
+  // --- 0.5 Clumsy Shield: trust questions win before knowledge base ---
+  const shield = matchClumsyShield(text);
+  if (shield) {
+    const shieldWantsName = shield.text.toLowerCase().includes("what's your name");
+    let shieldText = shield.text;
+
+    // If we already asked for name, don't ask again - swap the question
+    if (shieldWantsName && state.askedName) {
+      shieldText = shieldText.replace("What's your name?", "What do you want to understand today?");
+      shieldText = shieldText.replace("What's your name, love?", "What do you want to understand today?");
+      return {
+        intent: 'GREETING',
+        text: shieldText,
+        chips: shield.chips,
+        newState: state,
+        asksName: false,
+      };
+    }
+    if (shieldWantsName) {
+      state.askedName = true;
+    }
+    return {
+      intent: 'GREETING',
+      text: shieldText,
+      chips: shield.chips,
+      newState: state,
+      asksName: shieldWantsName,
+    };
+  }
 
   // --- 1. Soft Place & Doctor PDF actions first (so they always work) ---
   if (hasWord(lower, ['soft place', 'i need soft place', 'hide', 'panic button'])) {
@@ -205,7 +299,6 @@ export function getOviReply(
 
   // --- 4. Emotions ---
   if (hasWord(lower, ['scared', 'fear', 'afraid', 'worried', 'panic'])) {
-    // Let the knowledge base handle exact "I am scared" with its clean chips
     if (OVI_KNOWLEDGE[text]) {
       return {
         intent: 'EMOTIONAL_FEAR',
@@ -224,7 +317,6 @@ export function getOviReply(
 
   // --- 5. Greeting ---
   if (hasWord(lower, ['hi', 'hello', 'hey', 'good morning', 'good evening'])) {
-    // If it is an exact knowledge key like "How are you", use it
     if (OVI_KNOWLEDGE[text]) {
       return {
         intent: 'GREETING',
@@ -259,11 +351,9 @@ export function getOviReply(
   }
 
   // --- 7. Main knowledge base via resolver (exact match + keyword aliases) ---
-  // Only use resolver if the text is an exact key OR matches an alias.
-  // Otherwise fall through to UNRESOLVED so we log it.
   const isExactKey = !!OVI_KNOWLEDGE[text];
   const lowerText = text.toLowerCase();
-  const aliasKeywords = ['pressuring', 'genuinely cares', 'boyfriend is annoying', 'am shy', 'how are you', 'i am scared', 'are you ai', 'do you know me', 'what do you love', 'what is this', 'whatsup', 'hello', 'hi', 'hey'];
+  const aliasKeywords = ['pressuring', 'genuinely cares', 'boyfriend is annoying', 'am shy', 'how are you', 'i am scared', 'are you ai', 'do you know me', 'what do you love', 'what is this', 'whatsup', 'hello', 'hi', 'hey', 'doctor said pcos', 'need a scan', 'hormonal imbalance', 'come back in 3 months', 'went to the doctor'];
   const isAliasMatch = aliasKeywords.some(k => lowerText.includes(k));
 
   if (isExactKey || isAliasMatch) {
@@ -273,6 +363,28 @@ export function getOviReply(
       text: resolved.text,
       chips: resolved.chips,
       newState: state
+    };
+  }
+
+  // --- 7.5 Doctor language translator (Step 4) ---
+  if (lower.includes('doctor said') || lower.includes('doctor told me')) {
+    if (lower.includes('pcos')) {
+      return { intent: 'GREETING', text: OVI_KNOWLEDGE['Doctor said PCOS'].text, chips: OVI_KNOWLEDGE['Doctor said PCOS'].chips, newState: state };
+    }
+    if (lower.includes('scan') || lower.includes('ultrasound')) {
+      return { intent: 'GREETING', text: OVI_KNOWLEDGE['Doctor said I need a scan'].text, chips: OVI_KNOWLEDGE['Doctor said I need a scan'].chips, newState: state };
+    }
+    if (lower.includes('hormon')) {
+      return { intent: 'GREETING', text: OVI_KNOWLEDGE['Doctor said hormonal imbalance'].text, chips: OVI_KNOWLEDGE['Doctor said hormonal imbalance'].chips, newState: state };
+    }
+    if (lower.includes('3 month') || lower.includes('three month')) {
+      return { intent: 'GREETING', text: OVI_KNOWLEDGE['Doctor said come back in 3 months'].text, chips: OVI_KNOWLEDGE['Doctor said come back in 3 months'].chips, newState: state };
+    }
+    return {
+      intent: 'GREETING',
+      text: "Love, tell me exactly what the doctor said, word for word if you can. I will translate it into simple sister language so you understand it without fear. Big medical words are just labels — they are not sentences about your future.",
+      chips: ["Doctor said PCOS", "Doctor said I need a scan", "Doctor said hormonal imbalance"],
+      newState: state,
     };
   }
 

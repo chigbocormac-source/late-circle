@@ -16,6 +16,7 @@ export default function MyWins() {
   const [oviInsight, setOviInsight] = useState("I am watching for your patterns, fine girl.");
   const [biggestWin, setBiggestWin] = useState<string | null>(null);
   const [periodHistory, setPeriodHistory] = useState<any[]>([]);
+  const [showAllPeriods, setShowAllPeriods] = useState(false);
 
   const loadData = () => {
     const dailyHistory = JSON.parse(localStorage.getItem('lateCircleDailyHistory') || '{}');
@@ -32,7 +33,8 @@ export default function MyWins() {
         dateStr, 
         dayInitial: d.toLocaleDateString('en-GB', { weekday: 'narrow' }), 
         checkedIn,
-        fullDate: d.toLocaleDateString('en-GB', { weekday: 'long' })
+        fullDate: d.toLocaleDateString('en-GB', { weekday: 'long' }),
+        dayNumber: d.getDate(),
       });
     }
     setLast7Days(days);
@@ -41,7 +43,7 @@ export default function MyWins() {
     const total = days.filter(d => d.checkedIn).length;
     setTotalChecks(total);
 
-    // 3. Total days ever tracked (for "Your Journey So Far")
+    // 3. Total days ever tracked
     let totalDays = 0;
     Object.keys(dailyHistory).forEach(key => {
       if (dailyHistory[key] && dailyHistory[key].count > 0) totalDays++;
@@ -62,15 +64,17 @@ export default function MyWins() {
     }
     setStreak(currentStreak);
 
-    // 5. Ovi Noticed
+    // 5. Ovi Noticed (pattern observation, not celebration)
     const todayDone = days[6].checkedIn;
     const yesterdayDone = days[5].checkedIn;
     
     let insight = "";
     if (total === 0) {
       insight = "No check-in yet this week. Today is a good day to start. No wahala.";
+    } else if (currentStreak >= 5) {
+      insight = `${currentStreak} days in a row. Steady beats perfect.`;
     } else if (todayDone && !yesterdayDone && days.slice(0, 5).some(d => d.checkedIn)) {
-      insight = "You missed yesterday and you still came back today. That one is the hard part, my girl. Well done.";
+      insight = "You missed yesterday and came back today. That is the pattern I love to see — return, don't restart.";
     } else if (currentStreak >= 3) {
       insight = `${currentStreak} days in a row. You are doing it steady. I see you.`;
     } else {
@@ -78,9 +82,13 @@ export default function MyWins() {
     }
     setOviInsight(insight);
 
-    // 6. Biggest Win
-    if (todayDone && !yesterdayDone && days.slice(0, 5).some(d => d.checkedIn)) {
+    // 6. Biggest Win (celebration, distinct from Ovi Noticed)
+    if (currentStreak >= 5) {
+      setBiggestWin(`${currentStreak} days in a row. That is not luck anymore, fine girl. That is a habit.`);
+    } else if (todayDone && !yesterdayDone && days.slice(0, 5).some(d => d.checkedIn)) {
       setBiggestWin("You missed yesterday and you still came back. That is the real win, fine girl.");
+    } else if (total >= 5) {
+      setBiggestWin(`${total} days this week. Your body is learning that you show up for it.`);
     } else {
       setBiggestWin(null);
     }
@@ -122,8 +130,11 @@ export default function MyWins() {
 
   if (!isLoaded) return null;
 
+  const checkedInDays = last7Days.filter(d => d.checkedIn);
+  const visiblePeriods = showAllPeriods ? periodHistory : periodHistory.slice(0, 3);
+
   return (
-    <main className="min-h-screen bg-[#FFF0F3] text-[#4A2C35] flex flex-col items-center pt-12 px-6 font-sans relative pb-32 animate-page-enter">
+    <main className="min-h-screen bg-[#F1EBFF] text-[#4A2C35] flex flex-col items-center pt-12 px-6 font-sans relative pb-32 animate-page-enter">
       
       <button 
         onClick={() => router.push('/today')} 
@@ -168,8 +179,12 @@ export default function MyWins() {
         <div>
           <h3 className="text-[10px] font-bold text-[#4A2C35]/40 uppercase tracking-wider mb-1">Current Streak</h3>
           <p className="text-2xl font-bold text-[#FF8FA3]">{streak} <span className="text-sm text-[#4A2C35]/40 font-medium">days</span></p>
-          <p className="text-[10px] text-[#4A2C35]/50">
-            {last7Days.filter(d => d.checkedIn).map(d => d.dateStr.split('-').slice(1).join('/')).join(', ')}
+          <p className="text-[10px] text-[#4A2C35]/50 mt-1">
+            {checkedInDays.length === 0 
+              ? 'Start today 🌱' 
+              : checkedInDays.length <= 3
+                ? `Checked in: ${checkedInDays.map(d => d.fullDate.slice(0, 3)).join(', ')}`
+                : `Last checked in: ${checkedInDays[checkedInDays.length - 1].fullDate}`}
           </p>
         </div>
         <span className="text-3xl">🔥</span>
@@ -177,7 +192,7 @@ export default function MyWins() {
 
       {/* SHARE MY STREAK (Only if streak >= 2) */}
       {streak >= 2 && (
-        <div className="w-full max-w-sm bg-[#FFF0F3] border border-[#FF8FA3]/30 rounded-2xl p-4 mb-4 animate-fade-in flex flex-col items-center">
+        <div className="w-full max-w-sm bg-[#F1EBFF] border border-[#FF8FA3]/30 rounded-2xl p-4 mb-4 animate-fade-in flex flex-col items-center">
           <p className="text-sm font-bold text-[#8A2C3E] mb-1">🔥 {streak} days in a row</p>
           <p className="text-xs text-[#4A2C35]/60 mb-3">Your body is getting used to you checking in.</p>
           <a 
@@ -198,29 +213,30 @@ export default function MyWins() {
           <span className="text-xs font-bold text-[#9CAF88] bg-[#9CAF88]/10 px-2.5 py-1 rounded-full">{totalChecks} / 7</span>
         </div>
         
-        <div className="flex justify-between items-end h-20 mb-2">
+        <div className="flex justify-between items-end h-24 mb-2">
           {last7Days.map((d, i) => (
-            <div key={i} className="flex flex-col items-center gap-2">
+            <div key={i} className="flex flex-col items-center gap-1.5">
               <div className={`w-8 h-8 rounded-full border-2 transition-all flex items-center justify-center ${
                 d.checkedIn
                   ? 'bg-[#9CAF88] border-[#9CAF88] shadow-[0_0_10px_rgba(156,175,136,0.3)]' 
-                  : 'border-dashed border-[#4A2C35]/20 bg-[#FFF0F3]'
+                  : 'border-dashed border-[#4A2C35]/20 bg-[#F1EBFF]'
               }`}>
                 {d.checkedIn && <span className="text-sm font-bold text-white">✓</span>}
               </div>
               <span className="text-[10px] text-[#4A2C35]/40 font-medium">{d.dayInitial}</span>
+              <span className="text-[9px] text-[#4A2C35]/30">{d.dayNumber}</span>
             </div>
           ))}
         </div>
       </div>
 
-      {/* OVI NOTICED */}
+      {/* OVI NOTICED (pattern observation) */}
       <div className="w-full max-w-sm bg-white border border-[#4A2C35]/5 p-5 rounded-2xl shadow-sm mb-4">
         <h3 className="text-[11px] font-bold text-[#4A2C35]/40 uppercase tracking-wider mb-2">🤔 Ovi Noticed</h3>
         <p className="text-[13px] text-[#4A2C35] leading-relaxed">{oviInsight}</p>
       </div>
 
-      {/* BIGGEST WIN (Only if comeback) */}
+      {/* BIGGEST WIN (celebration, distinct copy) */}
       {biggestWin && (
         <div className="w-full max-w-sm bg-[#9CAF88]/10 border border-[#9CAF88]/20 p-5 rounded-2xl mb-4">
           <h3 className="text-[11px] font-bold text-[#9CAF88] uppercase tracking-wider mb-2">🏆 Biggest Win</h3>
@@ -228,21 +244,29 @@ export default function MyWins() {
         </div>
       )}
 
-      {/* PERIOD HISTORY */}
+      {/* PERIOD HISTORY (capped at 3, with See all) */}
       <div className="w-full max-w-sm bg-white border border-[#4A2C35]/5 rounded-3xl p-6 shadow-sm mb-4">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-[11px] font-bold text-[#4A2C35]/40 uppercase tracking-widest">📅 Period History</h2>
+          {periodHistory.length > 3 && (
+            <button 
+              onClick={() => setShowAllPeriods(!showAllPeriods)} 
+              className="text-[10px] font-bold text-[#9CAF88] active:opacity-50"
+            >
+              {showAllPeriods ? 'Show less' : `See all (${periodHistory.length})`}
+            </button>
+          )}
         </div>
         {periodHistory.length === 0 ? (
           <p className="text-xs text-[#4A2C35]/40 text-center py-4">No history yet. When your period comes, log it here and I will start learning your pattern.</p>
         ) : (
           <div className="flex flex-col gap-2">
-            {periodHistory.map((r, index) => (
+            {visiblePeriods.map((r, index) => (
               <div key={index} className="flex justify-between items-center border-b border-[#4A2C35]/5 pb-2 last:border-0 last:pb-0">
                 <span className="text-sm text-[#4A2C35]/80 font-medium">
                   {new Date(r.date + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
                 </span>
-                <span className="text-[10px] bg-[#FFF0F3] text-[#FF8FA3] px-2 py-0.5 rounded-full font-bold">
+                <span className="text-[10px] bg-[#F1EBFF] text-[#FF8FA3] px-2 py-0.5 rounded-full font-bold">
                   {r.length ? `${r.length} days` : 'Current'}
                 </span>
               </div>
